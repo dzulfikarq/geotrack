@@ -1,14 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
-  Building2,
   CalendarDays,
   Check,
   ChevronRight,
   CircleAlert,
   ClipboardCopy,
-  Cpu,
   Database,
   List,
   LoaderCircle,
@@ -19,21 +17,23 @@ import {
   Plus,
   Search,
   Trash2,
-  Truck,
   X,
-  type LucideIcon,
 } from "lucide-react";
 import Modal from "./components/Modal";
 import EntityForm, { type PickedLocation } from "./features/entities/EntityForm";
 import { createEntity, deleteEntity, listEntities, updateEntity } from "./features/entities/api";
-import type { Category, Entity, EntityFilters, EntityInput, EntityStatus } from "./features/entities/types";
+import type { Entity, EntityFilters, EntityInput, EntityStatus } from "./features/entities/types";
 import EntityMap from "./features/map/EntityMap";
+import CategoryManagement from "./features/categories/CategoryManagement";
+import { CategoryGlyph, getColor } from "./features/categories/icons";
+import { listCategories } from "./features/categories/api";
 
-const emptyFilters: EntityFilters = { q: "", category: "", status: "" };
+const emptyFilters: EntityFilters = { q: "", categoryId: "", status: "" };
 type ToastMessage = { kind: "success" | "error"; message: string };
 
 export default function App() {
   const queryClient = useQueryClient();
+  const [activePage, setActivePage] = useState<"map" | "categories">("map");
   const [filters, setFilters] = useState<EntityFilters>(emptyFilters);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -47,6 +47,8 @@ export default function App() {
   const [toast, setToast] = useState<ToastMessage | null>(null);
 
   const entitiesQuery = useQuery({ queryKey: ["entities", filters], queryFn: () => listEntities(filters) });
+  const categoriesQuery = useQuery({ queryKey: ["categories"], queryFn: listCategories });
+  const categories = categoriesQuery.data ?? [];
   const entities = entitiesQuery.data ?? [];
   const selected = entities.find((entity) => entity.id === selectedId) ?? null;
   const editing = entities.find((entity) => entity.id === editId) ?? null;
@@ -83,6 +85,7 @@ export default function App() {
   });
 
   function openCreate() {
+    if (!categories.length) return;
     setFormSession((value) => value + 1);
     setEditId(null);
     setPickedLocation(null);
@@ -102,6 +105,11 @@ export default function App() {
   function closeForm() {
     setFormOpen(false);
     setPickerActive(false);
+  }
+
+  function navigate(page: "map" | "categories") {
+    if (page === "categories") closeForm();
+    setActivePage(page);
   }
 
   function handleMapPick(latitude: number, longitude: number) {
@@ -141,9 +149,12 @@ export default function App() {
         </a>
         <div className="sidebar-label">WORKSPACE</div>
         <nav aria-label="Main navigation">
-          <a className="nav-item active" href="#map-explorer" aria-current="page" title="Map explorer">
+          <button className={`nav-item ${activePage === "map" ? "active" : ""}`} type="button" aria-current={activePage === "map" ? "page" : undefined} title="Map explorer" onClick={() => navigate("map")}>
             <MapPinned size={18} /><span>Map explorer</span>
-          </a>
+          </button>
+          <button className={`nav-item ${activePage === "categories" ? "active" : ""}`} type="button" aria-current={activePage === "categories" ? "page" : undefined} title="Categories" onClick={() => navigate("categories")}>
+            <Database size={18} /><span>Categories</span>
+          </button>
         </nav>
         <div className="sidebar-bottom">
           <div className="sidebar-status">
@@ -154,7 +165,7 @@ export default function App() {
         </div>
       </aside>
 
-      <main className="main-shell" id="map-explorer">
+      <main className="main-shell" id="map-explorer" hidden={activePage !== "map"}>
         <header className="topbar">
           <div className="page-heading">
             <div className="eyebrow"><span>WORKSPACE</span><ChevronRight size={13} /><span>MAP EXPLORER</span></div>
@@ -166,7 +177,7 @@ export default function App() {
               <span className="entity-total-icon"><Database size={16} /></span>
               <span><strong>{entitiesQuery.isLoading ? "—" : entities.length}</strong><small>entities in view</small></span>
             </div>
-            <button className="button button-primary add-button" type="button" onClick={openCreate} aria-label="Add entity">
+            <button className="button button-primary add-button" type="button" onClick={openCreate} aria-label="Add entity" disabled={!categories.length}>
               <Plus size={17} /><span>Add entity</span>
             </button>
           </div>
@@ -188,7 +199,7 @@ export default function App() {
                 <div className="panel-title-row"><h2>Entities</h2><span className="result-count">{entitiesQuery.isLoading ? "—" : entities.length}</span></div>
                 <p>Locations stored in your workspace</p>
               </div>
-              <button className="icon-button quick-add" type="button" onClick={openCreate} aria-label="Add entity"><Plus size={19} /></button>
+              <button className="icon-button quick-add" type="button" onClick={openCreate} aria-label="Add entity" disabled={!categories.length}><Plus size={19} /></button>
             </div>
 
             <div className="filter-controls">
@@ -200,11 +211,9 @@ export default function App() {
               <div className="filter-selects">
                 <label className="select-wrap">
                   <span className="sr-only">Filter by category</span>
-                  <select value={filters.category} onChange={(event) => setFilters({ ...filters, category: event.target.value as EntityFilters["category"] })}>
+                  <select value={filters.categoryId} onChange={(event) => setFilters({ ...filters, categoryId: event.target.value })}>
                     <option value="">All categories</option>
-                    <option value="vehicle">Vehicle</option>
-                    <option value="iot_device">IoT device</option>
-                    <option value="facility">Facility</option>
+                    {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
                   </select>
                 </label>
                 <label className="select-wrap">
@@ -217,7 +226,7 @@ export default function App() {
                   </select>
                 </label>
               </div>
-              {(filters.q || filters.category || filters.status) && (
+              {(filters.q || filters.categoryId || filters.status) && (
                 <button className="clear-filters" type="button" onClick={() => setFilters(emptyFilters)}>Clear all filters</button>
               )}
             </div>
@@ -237,10 +246,10 @@ export default function App() {
               ) : entities.length === 0 ? (
                 <div className="empty-state">
                   <span className="empty-icon"><MapPinned size={23} /></span>
-                  <strong>{filters.q || filters.category || filters.status ? "No matching entities" : "Your map is ready"}</strong>
-                  <p>{filters.q || filters.category || filters.status ? "Try another search or clear filters to see more locations." : "Add your first entity and its saved location will appear here."}</p>
-                  {!filters.q && !filters.category && !filters.status && <button className="button button-primary" type="button" onClick={openCreate}><Plus size={16} /> Add an entity</button>}
-                  {(filters.q || filters.category || filters.status) && <button className="text-button" type="button" onClick={() => setFilters(emptyFilters)}>Clear filters</button>}
+                  <strong>{filters.q || filters.categoryId || filters.status ? "No matching entities" : "Your map is ready"}</strong>
+                  <p>{filters.q || filters.categoryId || filters.status ? "Try another search or clear filters to see more locations." : "Add your first entity and its saved location will appear here."}</p>
+                  {!filters.q && !filters.categoryId && !filters.status && <button className="button button-primary" type="button" onClick={openCreate} disabled={!categories.length}><Plus size={16} /> Add an entity</button>}
+                  {(filters.q || filters.categoryId || filters.status) && <button className="text-button" type="button" onClick={() => setFilters(emptyFilters)}>Clear filters</button>}
                 </div>
               ) : (
                 entities.map((entity) => <EntityRow key={entity.id} entity={entity} selected={selectedId === entity.id} onClick={() => selectEntity(entity)} />)
@@ -252,6 +261,7 @@ export default function App() {
           <section className="map-panel" aria-label="Interactive entity map">
             <EntityMap
               entities={entities}
+              categories={categories}
               selected={selected}
               pickerActive={pickerActive}
               onSelect={selectEntity}
@@ -272,6 +282,10 @@ export default function App() {
         </section>
       </main>
 
+      <main className="main-shell category-main" hidden={activePage !== "categories"}>
+        <CategoryManagement onCategoryDeleted={(id) => setFilters((current) => current.categoryId === id ? { ...current, categoryId: "" } : current)} />
+      </main>
+
       {toast && (
         <div className={`toast toast-${toast.kind}`} role={toast.kind === "error" ? "alert" : "status"}>
           <span className="toast-icon">{toast.kind === "success" ? <Check size={16} /> : <CircleAlert size={16} />}</span>
@@ -284,6 +298,7 @@ export default function App() {
         <EntityForm
           key={formSession}
           initial={editing ? toInput(editing) : null}
+          categories={categories}
           pending={saveMutation.isPending}
           pickerActive={pickerActive}
           pickedLocation={pickedLocation}
@@ -312,9 +327,10 @@ export default function App() {
 }
 
 function EntityRow({ entity, selected, onClick }: { entity: Entity; selected: boolean; onClick: () => void }) {
+  const color = getColor(entity.category_color);
   return (
     <button type="button" className={`entity-row ${selected ? "selected" : ""}`} onClick={onClick} aria-pressed={selected}>
-      <span className={`category-icon ${entity.category}`} aria-hidden="true"><CategoryIcon category={entity.category} size={18} /></span>
+      <span className="category-icon" style={{ "--category-color": color.hex, "--category-soft": color.soft } as CSSProperties} aria-hidden="true"><CategoryGlyph iconKey={entity.category_icon_key} size={18} /></span>
       <span className="entity-row-copy">
         <span className="entity-row-top"><strong>{entity.name}</strong><StatusBadge status={entity.status} /></span>
         <span className="entity-row-code">{entity.code}</span>
@@ -332,6 +348,7 @@ function EntityDetailDrawer({ entity, onClose, onEdit, onDelete, onCopyCoordinat
   onDelete: () => void;
   onCopyCoordinates: () => void;
 }) {
+  const color = getColor(entity.category_color);
   return (
     <aside className="entity-detail-drawer" aria-label={`${entity.name} details`}>
       <div className="detail-heading">
@@ -340,7 +357,7 @@ function EntityDetailDrawer({ entity, onClose, onEdit, onDelete, onCopyCoordinat
       </div>
       <div className="detail-scroll">
         <div className="detail-badges">
-          <span className={`category-tag ${entity.category}`}><CategoryIcon category={entity.category} size={14} />{categoryLabel(entity.category)}</span>
+          <span className="category-tag" style={{ "--category-color": color.hex, "--category-soft": color.soft } as CSSProperties}><CategoryGlyph iconKey={entity.category_icon_key} size={14} />{entity.category_name}</span>
           <StatusBadge status={entity.status} />
         </div>
 
@@ -386,25 +403,16 @@ function StatusBadge({ status }: { status: EntityStatus }) {
   return <span className={`status-pill ${status}`}><i />{capitalize(status)}</span>;
 }
 
-function CategoryIcon({ category, size = 18 }: { category: Category; size?: number }) {
-  const Icon: LucideIcon = category === "vehicle" ? Truck : category === "iot_device" ? Cpu : Building2;
-  return <Icon size={size} strokeWidth={1.9} aria-hidden="true" />;
-}
-
 function toInput(entity: Entity): EntityInput {
   return {
     code: entity.code,
     name: entity.name,
-    category: entity.category,
+    category_id: entity.category_id,
     status: entity.status,
     latitude: entity.latitude,
     longitude: entity.longitude,
     description: entity.description,
   };
-}
-
-function categoryLabel(category: Category) {
-  return category === "iot_device" ? "IoT device" : capitalize(category);
 }
 
 function capitalize(value: string) {

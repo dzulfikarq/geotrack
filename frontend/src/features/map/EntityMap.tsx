@@ -1,11 +1,15 @@
-import { useEffect, useMemo } from "react";
-import { divIcon, type LatLngExpression } from "leaflet";
-import { Building2, Cpu, LocateFixed, Maximize2, Minus, Plus, Truck, type LucideIcon } from "lucide-react";
+import { useEffect, useMemo, type CSSProperties } from "react";
+import { type LatLngExpression } from "leaflet";
+import { LocateFixed, Maximize2, Minus, Plus } from "lucide-react";
 import { MapContainer, Marker, Popup, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
-import type { Category, Entity } from "../entities/types";
+import type { Entity } from "../entities/types";
+import type { Category } from "../categories/types";
+import { CategoryGlyph, CategoryMarker, getColor } from "../categories/icons";
+import { createLeafletCategoryIcon } from "./marker";
 
 type Props = {
   entities: Entity[];
+  categories: Category[];
   selected: Entity | null;
   pickerActive: boolean;
   onSelect: (entity: Entity) => void;
@@ -15,7 +19,7 @@ type Props = {
 
 const indonesiaCenter: LatLngExpression = [-2.5, 118];
 
-export default function EntityMap({ entities, selected, pickerActive, onSelect, onPick, onCancelPick }: Props) {
+export default function EntityMap({ entities, categories, selected, pickerActive, onSelect, onPick, onCancelPick }: Props) {
   return (
     <div className={`map-wrap ${pickerActive ? "is-picking" : ""}`} aria-label="Entity map">
       <MapContainer center={indonesiaCenter} zoom={5} scrollWheelZoom zoomControl={false} className="map-canvas">
@@ -44,10 +48,13 @@ export default function EntityMap({ entities, selected, pickerActive, onSelect, 
       )}
 
       <div className="map-legend" aria-label="Map marker categories">
-        <span className="legend-heading">ENTITY TYPES</span>
-        <span><i className="legend-dot vehicle-dot" />Vehicle</span>
-        <span><i className="legend-dot device-dot" />IoT device</span>
-        <span><i className="legend-dot facility-dot" />Facility</span>
+        <span className="legend-heading">CATEGORIES</span>
+        {categories.map((category) => (
+          <span key={category.id} className="map-legend-category">
+            <CategoryMarker iconKey={category.icon_key} color={category.color} markerStyle={category.marker_style} size={12} />
+            {category.name}
+          </span>
+        ))}
       </div>
       {entities.length === 0 && !pickerActive && (
         <div className="map-empty-note"><span>Map is ready</span><small>Add or filter entities to see saved locations.</small></div>
@@ -57,7 +64,7 @@ export default function EntityMap({ entities, selected, pickerActive, onSelect, 
 }
 
 function EntityMarker({ entity, selected, onSelect }: { entity: Entity; selected: boolean; onSelect: Props["onSelect"] }) {
-  const icon = useMemo(() => createMarkerIcon(entity.category, entity.status, selected), [entity.category, entity.status, selected]);
+  const icon = useMemo(() => createLeafletCategoryIcon(entity.category_icon_key, entity.category_color, entity.category_marker_style, selected, entity.status), [entity.category_icon_key, entity.category_color, entity.category_marker_style, entity.status, selected]);
   return (
     <Marker
       position={[entity.latitude, entity.longitude]}
@@ -68,10 +75,10 @@ function EntityMarker({ entity, selected, onSelect }: { entity: Entity; selected
       <Tooltip direction="top" offset={[0, -19]}>{entity.code} · {entity.name}</Tooltip>
       <Popup>
         <div className="map-popup">
-          <span className={`popup-category-icon ${entity.category}`}><CategoryGlyph category={entity.category} size={16} /></span>
+          <span className="popup-category-icon" style={{ "--category-color": getColor(entity.category_color).hex, "--category-soft": getColor(entity.category_color).soft } as CSSProperties}><CategoryGlyph iconKey={entity.category_icon_key} size={16} /></span>
           <div className="popup-copy">
             <strong>{entity.name}</strong>
-            <span>{entity.code}</span>
+            <span>{entity.category_name} · {entity.code}</span>
           </div>
           <span className={`status-pill ${entity.status}`}><i />{capitalize(entity.status)}</span>
           <span className="popup-coordinates">{entity.latitude.toFixed(5)}, {entity.longitude.toFixed(5)}</span>
@@ -148,35 +155,6 @@ function focusMap(map: ReturnType<typeof useMap>, entities: Entity[], selected: 
   } else {
     map.flyTo(indonesiaCenter, 5, { duration: 0.45 });
   }
-}
-
-function createMarkerIcon(category: Category, status: Entity["status"], selected: boolean) {
-  const size = selected ? 48 : 42;
-  const iconClass = ["entity-marker", category, status === "inactive" ? "is-inactive" : "", status === "maintenance" ? "is-maintenance" : "", selected ? "is-selected" : ""]
-    .filter(Boolean)
-    .join(" ");
-  const html = `<span class="${iconClass}" aria-hidden="true">${categorySvg(category)}</span>`;
-  return divIcon({
-    className: "entity-marker-wrap",
-    html,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-    popupAnchor: [0, -size / 2],
-  });
-}
-
-function categorySvg(category: Category) {
-  const paths = {
-    vehicle: '<path d="M10 17h4V5H2v12h3"/><path d="M14 9h4l4 4v4h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="17.5" r="2.5"/>',
-    iot_device: '<rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 9h6v6H9z"/><path d="M9 1v4m6-4v4m-6 14v4m6-4v4M1 9h4m-4 6h4m14-6h4m-4 6h4"/>',
-    facility: '<path d="M6 22V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v19"/><path d="M6 12H4a2 2 0 0 0-2 2v8h20v-8a2 2 0 0 0-2-2h-2"/><path d="M10 6h4m-4 4h4m-4 4h4m-4 4h4"/>',
-  }[category];
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
-}
-
-function CategoryGlyph({ category, size }: { category: Category; size: number }) {
-  const Icon: LucideIcon = category === "vehicle" ? Truck : category === "iot_device" ? Cpu : Building2;
-  return <Icon size={size} strokeWidth={1.9} aria-hidden="true" />;
 }
 
 function capitalize(value: string) {

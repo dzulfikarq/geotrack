@@ -4,7 +4,7 @@ import { entitySchema } from "./schema";
 const valid = {
   code: "IOT-001",
   name: "Temperature Sensor",
-  category: "iot_device",
+  category_id: "00000000-0000-4000-8000-000000000002",
   status: "active",
   latitude: 0,
   longitude: 0,

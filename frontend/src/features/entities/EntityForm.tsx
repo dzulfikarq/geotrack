@@ -4,12 +4,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { LoaderCircle, MapPin } from "lucide-react";
 import { ApiError } from "./api";
 import { entitySchema } from "./schema";
-import { categories, statuses, type EntityInput } from "./types";
+import { statuses, type EntityInput } from "./types";
+import type { Category } from "../categories/types";
 
 export type PickedLocation = { latitude: number; longitude: number; sequence: number };
 
 type Props = {
   initial: EntityInput | null;
+  categories: Category[];
   pending: boolean;
   pickerActive: boolean;
   pickedLocation: PickedLocation | null;
@@ -18,10 +20,9 @@ type Props = {
   onCancel: () => void;
 };
 
-const defaultValues: EntityInput = {
+const defaultValues: Omit<EntityInput, "category_id"> = {
   code: "",
   name: "",
-  category: "vehicle",
   status: "active",
   latitude: -7.9666,
   longitude: 112.6326,
@@ -30,6 +31,7 @@ const defaultValues: EntityInput = {
 
 export default function EntityForm({
   initial,
+  categories,
   pending,
   pickerActive,
   pickedLocation,
@@ -44,7 +46,10 @@ export default function EntityForm({
     setError,
     setValue,
     formState: { errors },
-  } = useForm<EntityInput>({ resolver: zodResolver(entitySchema), defaultValues: initial ?? defaultValues });
+  } = useForm<EntityInput>({
+    resolver: zodResolver(entitySchema),
+    defaultValues: initial ?? { ...defaultValues, category_id: categories[0]?.id ?? "" },
+  });
 
   useEffect(() => {
     if (!pickedLocation) return;
@@ -90,10 +95,10 @@ export default function EntityForm({
           </label>
           <label className="form-field">
             <span>Category <b>*</b></span>
-            <select {...register("category")} aria-invalid={!!errors.category} aria-describedby={errors.category ? "category-error" : undefined}>
-              {categories.map((category) => <option key={category} value={category}>{categoryLabel(category)}</option>)}
+            <select {...register("category_id")} aria-invalid={!!errors.category_id} aria-describedby={errors.category_id ? "category-error" : undefined}>
+              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
             </select>
-            {fieldError("category") && <small className="field-error" id="category-error" role="alert">{fieldError("category")}</small>}
+            {fieldError("category_id") && <small className="field-error" id="category-error" role="alert">{fieldError("category_id")}</small>}
           </label>
           <label className="form-field">
             <span>Status <b>*</b></span>
@@ -150,10 +155,6 @@ export default function EntityForm({
       </div>
     </form>
   );
-}
-
-function categoryLabel(category: string) {
-  return category === "iot_device" ? "IoT device" : capitalize(category);
 }
 
 function capitalize(value: string) {

@@ -18,7 +18,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${apiURL}${path}`, {
@@ -41,7 +41,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export function listEntities(filters: EntityFilters): Promise<Entity[]> {
   const params = new URLSearchParams();
   if (filters.q.trim()) params.set("q", filters.q.trim());
-  if (filters.category) params.set("category", filters.category);
+  if (filters.categoryId) params.set("category_id", filters.categoryId);
   if (filters.status) params.set("status", filters.status);
   const query = params.toString();
   return request(`/entities${query ? `?${query}` : ""}`);
