@@ -54,7 +54,8 @@ geotrack/
 │   ├── DATABASE.md
 │   ├── USER_GUIDE.md
 │   ├── TESTING.md
-│   └── LIMITATIONS.md
+│   ├── LIMITATIONS.md
+│   └── DECISION.md
 ├── backend/
 │   ├── .env.example
 │   ├── go.mod
@@ -134,6 +135,7 @@ Endpoint dan kontrak lengkap: [API.md](API.md). Persistensi dan schema: [DATABAS
 
 ## Keputusan dan konsekuensi
 
+- Rekonstruksi keputusan historis dan kebijakan pencatatan berikutnya ada di [DECISION.md](DECISION.md). Dokumen arsitektur ini menggambarkan baseline yang telah di-commit sebelum perubahan kategori/typography yang masih in progress.
 - Penyimpanan lokal SQLite menjaga setup sederhana, tetapi bukan desain high-availability.
 - Pool DB dibatasi satu koneksi agar operasi SQLite terserialisasi. Ini membatasi throughput baca; belum diukur.
 - Schema menggunakan `CREATE TABLE/INDEX IF NOT EXISTS` yang di-embed; belum ada migration versioning framework.

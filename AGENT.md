@@ -35,3 +35,13 @@ Tidak ada tinjauan atau pengujian manusia yang tercatat dalam sesi ini. Tinjauan
 - Smoke test Vite — passed untuk penyajian HTML entry yang memuat identitas GeoTrack dan `/src/main.tsx`; ini bukan test render browser.
 
 Kegagalan percobaan awal dan hal yang belum dites dicatat terpisah di [docs/TESTING.md](docs/TESTING.md). Tidak ada klaim bahwa seluruh acceptance criteria telah lulus.
+
+## Kebijakan pencatatan keputusan
+
+- Sebelum mengambil atau mengusulkan keputusan teknis signifikan, periksa [docs/DECISION.md](docs/DECISION.md) untuk keputusan dan constraint yang sudah ada.
+- Tambahkan record baru ke akhir dokumen dengan ID berurutan. Jangan menghapus atau menulis ulang narasi historis.
+- Jika keputusan berubah, buat record baru yang menyebut ID keputusan lama dan alasan perubahan. Tambahkan supersession/correction note append-only yang menetapkan status efektif keputusan lama sebagai **Superseded**.
+- Untuk setiap record, catat konteks, alternatif yang benar-benar tercatat, keputusan, alasan, dampak, status, tanggal jika terverifikasi, owner (`Human`, `AI-assisted`, atau `Unknown`), evidence, dan evidence level (`Confirmed` atau `Inferred`).
+- Bedakan kebutuhan/keputusan Human dari pilihan teknis Agentic AI. Jangan mengarang alasan, tanggal, alternatif, atau reasoning internal; tulis **Tidak terverifikasi** bila bukti tidak tersedia.
+- Catat keputusan yang berdampak pada arsitektur, data, kontrak API, keamanan, dependensi utama, atau UX produk. Jangan catat aktivitas rutin dan detail implementasi kecil.
+- Perbarui tautan README bila lokasi dokumen berubah. Pastikan perubahan source/docs konsisten dengan [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), lalu verifikasi referensi commit/file sebelum commit.
