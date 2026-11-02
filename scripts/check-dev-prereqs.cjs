@@ -8,17 +8,18 @@ const go = spawnSync("go", ["version"], { cwd: root, encoding: "utf8" });
 let goVersion = "";
 
 if (go.error?.code === "ENOENT") {
-  issues.push("Go tidak ditemukan. Instal Go 1.23+ dari https://go.dev/dl/, lalu buka terminal baru.");
+  issues.push("Go tidak ditemukan. Instal Go 1.26.10+ dari https://go.dev/dl/, lalu buka terminal baru.");
 } else if (go.status !== 0) {
   issues.push(`Perintah Go gagal dijalankan: ${(go.stderr || go.error?.message || "unknown error").trim()}`);
 } else {
-  const match = `${go.stdout}\n${go.stderr}`.match(/\bgo(\d+)\.(\d+)(?:\.\d+)?/);
+  const match = `${go.stdout}\n${go.stderr}`.match(/\bgo(\d+)\.(\d+)\.(\d+)/);
   if (!match) {
-    issues.push("Versi Go tidak dapat dikenali. Pastikan Go 1.23+ tersedia di PATH.");
+    issues.push("Versi Go tidak dapat dikenali. Pastikan Go 1.26.10+ tersedia di PATH.");
   } else {
-    goVersion = `${match[1]}.${match[2]}`;
-    if (Number(match[1]) < 1 || (Number(match[1]) === 1 && Number(match[2]) < 23)) {
-      issues.push(`Ditemukan Go ${goVersion}; GeoTrack memerlukan Go 1.23+. Perbarui Go lalu buka terminal baru.`);
+    const [major, minor, patch] = match.slice(1).map(Number);
+    goVersion = `${major}.${minor}.${patch}`;
+    if (major < 1 || (major === 1 && (minor < 26 || (minor === 26 && patch < 10)))) {
+      issues.push(`Ditemukan Go ${goVersion}; GeoTrack memerlukan Go 1.26.10+. Perbarui Go lalu buka terminal baru.`);
     }
   }
 }
