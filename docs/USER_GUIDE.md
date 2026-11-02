@@ -4,14 +4,14 @@ Panduan ini menjelaskan antarmuka yang tersedia di kode aktual. Alur UI belum di
 
 ## 1. Jalankan aplikasi
 
-Ikuti bagian [Mulai cepat di README](../README.md#mulai-cepat). Jika database baru kosong, daftar akan menampilkan empty state. Seed opsional tersedia melalui [DATABASE.md](DATABASE.md#seed-data).
+Ikuti bagian [Mulai cepat di README](../README.md#mulai-cepat). Database baru sudah memiliki tiga kategori bawaan; daftar entity kosong menampilkan empty state. Seed entity opsional tersedia melalui [DATABASE.md](DATABASE.md#seed-data).
 
 ## 2. Lihat dan temukan entitas
 
 - Panel **Entities** menampilkan kode, nama, kategori, dan status untuk data dari API.
 - Ketik kode atau nama di kolom pencarian. Pilih kategori dan/atau status; filter dapat digabung.
 - Gunakan **Clear filters** untuk kembali menampilkan semua data.
-- Marker dan daftar memakai hasil filter yang sama. Warna marker membedakan kategori; status inactive ditampilkan lebih redup dan maintenance memakai garis marker putus-putus.
+- Marker dan daftar memakai hasil filter yang sama. Icon, warna, dan bentuk marker berasal dari metadata kategori; inactive tampil lebih redup dan maintenance memakai garis marker putus-putus.
 - Klik baris atau marker untuk memilih entitas. Panel detail menampilkan kode, nama, kategori, status, koordinat, deskripsi, waktu dibuat, dan waktu terakhir diperbarui. UUID internal tersedia di API, tetapi tidak ditampilkan di panel.
 
 ## 3. Tambah entitas
@@ -21,6 +21,8 @@ Ikuti bagian [Mulai cepat di README](../README.md#mulai-cepat). Jika database ba
 3. Form baru mengisi koordinat awal `-7.9666, 112.6326`; ubah sesuai lokasi yang diinginkan. Angka nol sah.
 4. Pilih **Create entity**. Jika kode duplikat atau data tidak valid, form menampilkan error dari client/server.
 5. Setelah sukses, data disimpan lewat API dan panel detail dibuka. Filter dibersihkan agar record terlihat.
+
+Form kategori diambil dari backend. Pilihan menampilkan nama kategori saat ini; UUID kategori tetap tersimpan saat nama kategori diganti.
 
 Teks tombol UI saat ini berbahasa Inggris seperti **Add entity**, **Create entity**, **Save changes**, dan **Delete entity**.
 
@@ -39,7 +41,17 @@ Klik peta biasa tidak mengubah form jika mode picker tidak aktif. Picker mengamb
 - Untuk menghapus, pilih **Delete**, lalu **Delete entity** pada dialog konfirmasi. **Cancel** menutup dialog tanpa mengirim permintaan delete.
 - Daftar/marker diperbarui setelah API berhasil. Jika API gagal, error ditampilkan dan aplikasi tidak mengklaim perubahan berhasil.
 
-## 6. Status aplikasi
+## 6. Kelola kategori
+
+1. Pilih **Categories** pada sidebar. Halaman menampilkan icon, nama, deskripsi, jumlah entity, dan preview bentuk marker.
+2. Pilih **Add category** untuk kategori baru atau **Edit** untuk mengubah nama/deskripsi/visual kategori. Nama wajib dan unik.
+3. Pilih icon dari katalog Lucide yang dikelompokkan Vehicle, IoT, Facility, dan General. Pilih satu dari delapan warna preset serta bentuk **Pin**, **Circle**, atau **Rounded square**. Preview marker mengikuti pilihan secara langsung.
+4. Pilih **Save changes** atau **Create category**. Category dropdown, filter, baris entity, peta, dan legend memakai data kategori terbaru dari API.
+5. Kategori bawaan Vehicle, IoT Device, dan Facility tidak dapat dihapus. Kategori custom hanya dapat dihapus ketika tidak dipakai entity; dialog memberi tahu jika entity masih terhubung.
+
+Ikon disimpan sebagai key katalog, bukan SVG/HTML. Mengubah metadata visual kategori akan memperbarui marker entity yang terhubung.
+
+## 7. Status aplikasi
 
 Panel menampilkan loading, error dengan tombol retry, empty state, hasil pencarian kosong, dan pesan sukses setelah perubahan. Label API pada sidebar mencerminkan status query awal/terakhir; itu bukan health monitoring berkelanjutan. Timestamp detail diformat mengikuti locale browser.
 

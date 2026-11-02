@@ -224,4 +224,18 @@ Keputusan berikut pertama terlihat pada commit root `32fe06a` (`2026-11-02 18:04
 
 ## Kebijakan pencatatan keputusan berikutnya
 
-Mulai dari dokumen ini, setiap keputusan teknis signifikan yang dibuat atau diusulkan Agentic AI harus dicatat di `docs/DECISION.md` dalam Bahasa Indonesia. Tambahkan record dengan ID berikutnya secara append-only. Jangan ubah atau hapus narasi historis secara diam-diam; koreksi atau supersession dicatat sebagai entri baru yang merujuk record lama dan mencatat status efektif **Superseded**. Setiap record wajib mencantumkan seluruh field template di atas, termasuk alternatif hanya bila benar-benar tercatat, pemilik Human/AI-assisted/Unknown, evidence, dan tingkat Confirmed/Inferred. Tulis **Tidak terverifikasi** bila tanggal/alasan/pemilik tidak dapat dibuktikan; jangan mengarang internal reasoning AI. Pisahkan requirement Human dari pilihan teknis AI-assisted. Jangan catat perubahan rutin atau detail implementasi kecil sebagai keputusan arsitektur.
+
+## 8. Penyelesaian kategori dan customization visual
+
+#### DEC-016 — Icon kategori dan marker peta memakai allowlist terkurasi
+
+- **Tanggal keputusan:** `2026-11-02`, berdasarkan konteks sesi implementasi.
+- **Konteks:** DEC-015 menetapkan relasi kategori stabil, tetapi icon, warna, dan bentuk map marker perlu konsisten di picker, entity UI, legend, dan Leaflet. Catatan DEC-015 merekam implementasi masih in progress pada snapshot terdahulu.
+- **Alternatif yang tercatat:** Pengguna meminta `lucide-react` diprioritaskan jika tersedia, melarang arbitrary SVG/HTML, dan meminta tidak menambah icon library tanpa kebutuhan. Evaluasi pustaka/format lain tidak tercatat.
+- **Keputusan:** Pakai 24 key Lucide terkurasi dalam grup Vehicle/IoT/Facility/General, 8 key warna preset, dan marker style `pin`, `circle`, `rounded-square`. Simpan key stabil di DB/API. Render `DivIcon` dari komponen Lucide allowlisted; fallback metadata unknown ke icon/warna/bentuk aman. Pertahankan tiga kategori bawaan dan tolak delete bawaan maupun kategori yang masih dipakai entity.
+- **Alasan:** Memenuhi kustomisasi tanpa dependency/icon markup dari user; key stabil menjaga rendering konsisten dan aman. Perlindungan kategori bawaan mempertahankan baseline produk.
+- **Dampak:** Frontend registry dipakai picker/list/detail/marker/legend; backend memvalidasi allowlist terpisah sebagai trust boundary. Perubahan kategori menginvalidasi cache entity supaya marker ikut berubah. DEC-015 tetap catatan desain; implementasinya kini selesai untuk source yang diverifikasi.
+- **Status:** Accepted.
+- **Pemilik keputusan:** Human untuk kebutuhan produk dan batas aman; AI-assisted untuk susunan katalog, preset, fallback, dan integrasi.
+- **Bukti:** Instruksi implementasi sesi `2026-11-02`; `frontend/src/features/categories/icons.tsx`; `frontend/src/features/map/marker.ts`; `backend/internal/category/model.go`; `backend/internal/category/handler_test.go`; `frontend/src/features/categories/icons.test.ts`; `docs/TESTING.md`.
+- **Tingkat bukti:** Confirmed.

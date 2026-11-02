@@ -10,16 +10,33 @@ Backend memakai `database/sql` dengan driver pure-Go `modernc.org/sqlite`, sehin
 - Database lokal dan file SQLite diabaikan oleh `.gitignore`; tidak ada data database yang perlu di-commit.
 - `backend/.env.example` adalah contoh saja. Proses Go membaca environment, bukan file `.env`.
 
-Saat `database.Open` dipanggil, schema SQL yang di-embed dari `backend/internal/database/schema.sql` dijalankan dengan `CREATE ... IF NOT EXISTS`. Dengan demikian tabel dan index tersedia otomatis saat API/seed dibuka. Tidak ada migration version table atau alat migrasi terpisah.
+Saat `database.Open` dipanggil, schema SQL embedded dijalankan lalu migrasi idempotent di dalam transaksi. `schema_migrations` mencatat versi 2 (relasi kategori) dan 3 (visual metadata kategori); tidak ada migration framework eksternal. Migrasi versi lama membuat kategori bawaan ber-ID tetap, menyalin setiap entity dari kolom `category` ke `category_id`, memverifikasi jumlah baris salinan, mengganti tabel, lalu membangun ulang index status dan kategori. Kegagalan menolak commit sehingga tabel entity lama tetap utuh.
 
 ## Skema aktual
 
 ```sql
+CREATE TABLE IF NOT EXISTS categories (
+  id TEXT PRIMARY KEY,
+  legacy_key TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  name TEXT NOT NULL UNIQUE COLLATE NOCASE CHECK (length(trim(name)) BETWEEN 1 AND 60),
+  description TEXT NOT NULL DEFAULT '',
+  icon TEXT NOT NULL DEFAULT 'truck' CHECK (icon IN ('truck', 'cpu', 'building-2', 'package', 'radio', 'map-pin')),
+  icon_key TEXT NOT NULL DEFAULT 'truck' CHECK (icon_key IN (
+    'truck', 'car-front', 'bus-front', 'bike', 'ship', 'train-front',
+    'cpu', 'radio', 'router', 'wifi', 'satellite-dish', 'thermometer',
+    'building-2', 'warehouse', 'factory', 'hospital', 'school', 'landmark',
+    'map-pin', 'map-pinned', 'package', 'box', 'briefcase', 'database'
+  )),
+  color TEXT NOT NULL CHECK (color IN ('orange', 'teal', 'violet', 'blue', 'green', 'rose', 'slate', 'amber')),
+  marker_style TEXT NOT NULL DEFAULT 'pin' CHECK (marker_style IN ('pin', 'circle', 'rounded-square')),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS entities (
   id TEXT PRIMARY KEY,
   code TEXT NOT NULL COLLATE NOCASE UNIQUE,
   name TEXT NOT NULL,
-  category TEXT NOT NULL CHECK (category IN ('vehicle', 'iot_device', 'facility')),
+  category_id TEXT NOT NULL REFERENCES categories(id) ON DELETE RESTRICT,
   status TEXT NOT NULL CHECK (status IN ('active', 'inactive', 'maintenance')),
   latitude REAL NOT NULL CHECK (latitude BETWEEN -90 AND 90),
   longitude REAL NOT NULL CHECK (longitude BETWEEN -180 AND 180),
@@ -27,7 +44,7 @@ CREATE TABLE IF NOT EXISTS entities (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
-CREATE INDEX IF NOT EXISTS idx_entities_category ON entities(category);
+CREATE INDEX IF NOT EXISTS idx_entities_category_id ON entities(category_id);
 CREATE INDEX IF NOT EXISTS idx_entities_status ON entities(status);
 ```
 
@@ -36,14 +53,16 @@ CREATE INDEX IF NOT EXISTS idx_entities_status ON entities(status);
 | `id` | `TEXT PRIMARY KEY`; server menghasilkan UUID v4 berbentuk string. Tidak ada constraint SQL yang memvalidasi format UUID. |
 | `code` | Wajib, unique dengan collation `NOCASE`; aplikasi menormalisasi menjadi uppercase dan memvalidasi format. |
 | `name` | Wajib; aturan panjang/trim ditegakkan aplikasi. |
-| `category` | Wajib; dibatasi `CHECK` ke kategori yang didukung. |
+| `category_id` | Wajib; UUID kategori, foreign key `ON DELETE RESTRICT`. `category` lama hanya alias API dan tidak disimpan lagi. |
 | `status` | Wajib; dibatasi `CHECK` ke status yang didukung. |
 | `latitude` | `REAL NOT NULL`, `CHECK -90..90` inklusif; nol valid. |
 | `longitude` | `REAL NOT NULL`, `CHECK -180..180` inklusif; nol valid. |
 | `description` | `TEXT NOT NULL DEFAULT ''`; batas panjang ditegakkan aplikasi. |
 | `created_at`, `updated_at` | `TEXT NOT NULL`; dibuat server sebagai waktu UTC RFC3339Nano. `updated_at` diganti saat update. |
 
-Constraint SQL adalah perlindungan tambahan. Validasi format kode, panjang string, enum, nilai finite koordinat, dan required fields dijalankan di aplikasi. Rincian: [API.md](API.md#validasi).
+`categories.id` adalah UUID stabil; rename tidak mengubah relasi. `legacy_key` menyimpan alias tiga kategori bawaan (`vehicle`, `iot_device`, `facility`); kategori custom memakai UUID sebagai legacy key. Tiga kategori bawaan tidak dapat dihapus melalui repository API. Nama unik case-insensitive. Kolom lama `icon` dapat tetap ada pada database upgrade untuk kompatibilitas; aplikasi membaca `icon_key`.
+
+Constraint SQL adalah perlindungan tambahan. Validasi format kode, panjang string, enum allowlist visual, nilai finite koordinat, dan required fields dijalankan di aplikasi. Rincian: [API.md](API.md#validasi).
 
 ## Akses database
 

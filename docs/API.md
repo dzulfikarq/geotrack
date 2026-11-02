@@ -7,6 +7,10 @@ API memakai JSON. Base path entity adalah `/api/v1`; health endpoint berada di `
 | Method | Path | Sukses | Keterangan |
 |---|---|---:|---|
 | `GET` | `/health` | `200` | Mengembalikan `{"status":"ok"}`; bukan pemeriksaan readiness database. |
+| `GET` | `/api/v1/categories` | `200` | List kategori beserta jumlah entity. |
+| `POST` | `/api/v1/categories` | `201` | Membuat kategori. |
+| `PUT` | `/api/v1/categories/:id` | `200` | Memperbarui kategori. |
+| `DELETE` | `/api/v1/categories/:id` | `204` | Menghapus kategori kosong non-bawaan. |
 | `GET` | `/api/v1/entities` | `200` | List semua entitas. |
 | `GET` | `/api/v1/entities/:id` | `200` | Membaca satu entitas. |
 | `POST` | `/api/v1/entities` | `201` | Membuat entitas. |
@@ -18,11 +22,11 @@ API memakai JSON. Base path entity adalah `/api/v1`; health endpoint berada di `
 Contoh:
 
 ```http
-GET /api/v1/entities?q=sensor&category=iot_device&status=active
+GET /api/v1/entities?q=sensor&category_id=00000000-0000-4000-8000-000000000002&status=active
 ```
 
 - `q` opsional: pencarian substring pada `code` atau `name`; case-insensitive untuk karakter ASCII mengikuti perilaku SQLite `LIKE`/`NOCASE`.
-- `category` opsional: `vehicle`, `iot_device`, atau `facility`.
+- `category_id` opsional: UUID stabil kategori. `category` tetap tersedia sebagai filter legacy untuk key `vehicle`, `iot_device`, atau `facility`; kirim salah satu saja.
 - `status` opsional: `active`, `inactive`, atau `maintenance`.
 - Filter dapat digabung. Parameter kategori/status invalid menghasilkan `400 VALIDATION_ERROR`.
 - Hasil diurutkan berdasarkan kode lalu ID. Tidak ada pagination.
@@ -42,7 +46,7 @@ Respons list kosong tetap berupa array kosong:
 {
   "code": "IOT-001",
   "name": "Sensor Suhu A",
-  "category": "iot_device",
+  "category_id": "00000000-0000-4000-8000-000000000002",
   "status": "active",
   "latitude": -7.9666,
   "longitude": 112.6326,
@@ -63,6 +67,11 @@ Create, read, dan update mengembalikan satu entity dalam `data`:
     "code": "IOT-001",
     "name": "Sensor Suhu A",
     "category": "iot_device",
+    "category_id": "00000000-0000-4000-8000-000000000002",
+    "category_name": "IoT Device",
+    "category_icon_key": "cpu",
+    "category_color": "teal",
+    "category_marker_style": "circle",
     "status": "active",
     "latitude": -7.9666,
     "longitude": 112.6326,
@@ -73,7 +82,28 @@ Create, read, dan update mengembalikan satu entity dalam `data`:
 }
 ```
 
-ID dan timestamp dibuat server. Timestamp UTC dalam format RFC3339Nano. `DELETE` sukses mengembalikan `204 No Content` tanpa JSON.
+ID dan timestamp dibuat server. `category` dipertahankan sebagai legacy key; UI baru menggunakan `category_id`. Metadata category pada entity berasal dari relasi terkini. Timestamp UTC dalam format RFC3339Nano. `DELETE` sukses mengembalikan `204 No Content` tanpa JSON.
+
+## Category request/response
+
+Create/update memakai full object berikut. `description` opsional; field lain wajib.
+
+```json
+{
+  "name": "Cold storage",
+  "description": "Refrigerated depots",
+  "icon_key": "warehouse",
+  "color": "blue",
+  "marker_style": "rounded-square"
+}
+```
+
+Kategori yang dikembalikan memiliki `id`, `name`, `description`, `icon_key`, `color`, `marker_style`, `entity_count`, `is_builtin`, `created_at`, dan `updated_at`. `is_builtin` menandai Vehicle, IoT Device, dan Facility; tiga kategori bawaan tidak dapat dihapus. UUID kategori tidak berubah ketika nama/visual metadata diedit.
+
+- Icon key harus salah satu dari 24 Lucide key terkurasi di `frontend/src/features/categories/icons.tsx`; SVG/HTML mentah tidak diterima.
+- `color`: `orange`, `teal`, `violet`, `blue`, `green`, `rose`, `slate`, `amber`.
+- `marker_style`: `pin`, `circle`, `rounded-square`.
+- Nama kategori wajib, maksimal 60 karakter, unik case-insensitive. Description maksimal 500 karakter.
 
 ## Validasi
 
@@ -81,7 +111,7 @@ ID dan timestamp dibuat server. Timestamp UTC dalam format RFC3339Nano. `DELETE`
 |---|---|
 | `code` | Setelah trim dan uppercase: 3–32 karakter ASCII `A-Z`, angka, atau `-`; unik case-insensitive. |
 | `name` | Setelah trim: 2–100 Unicode code point. |
-| `category` | Salah satu dari tiga kategori yang tercantum di atas. |
+| `category_id` / `category` | Tepat salah satu: ID kategori yang ada, atau legacy key (`vehicle`, `iot_device`, `facility`). Keduanya dipasok sekaligus ditolak. |
 | `status` | Salah satu dari tiga status yang tercantum di atas. |
 | `latitude` | Wajib hadir dan bukan `null`; angka finite dalam rentang inklusif `-90..90`. |
 | `longitude` | Wajib hadir dan bukan `null`; angka finite dalam rentang inklusif `-180..180`. |
@@ -109,8 +139,11 @@ Format umum:
 |---:|---|---|
 | `400` | `VALIDATION_ERROR` | Field entity atau filter kategori/status tidak valid. |
 | `400` | `MALFORMED_JSON` | JSON malformed/terlalu besar, field asing, tipe JSON tidak sesuai, atau ada nilai JSON tambahan setelah object. |
-| `404` | `NOT_FOUND` | ID tidak ditemukan untuk GET, PUT, atau DELETE. |
+| `404` | `NOT_FOUND` | Entity tidak ditemukan, atau kategori tidak ditemukan untuk PUT/DELETE. |
 | `409` | `DUPLICATE_CODE` | Kode entitas sudah digunakan; detail field ada di `fields.code`. |
+| `409` | `CATEGORY_NAME_EXISTS` | Nama kategori sudah dipakai. |
+| `409` | `CATEGORY_IN_USE` | Kategori masih direferensikan entity (`ON DELETE RESTRICT`). |
+| `409` | `CATEGORY_BUILT_IN` | Kategori bawaan tidak dapat dihapus. |
 | `500` | `INTERNAL_ERROR` | Kegagalan server/database; detail internal tidak dikirim. |
 
 Contoh duplikasi:

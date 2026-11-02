@@ -4,7 +4,7 @@
 
 ## Cakupan dan sumber
 
-Audit mencakup `frontend/src/styles.css`, `frontend/tailwind.config.js`, `frontend/src/App.tsx`, `frontend/src/components/Modal.tsx`, `frontend/src/features/entities/EntityForm.tsx`, `frontend/src/features/map/EntityMap.tsx`, dan `frontend/index.html`. Catatan menggambarkan working tree saat dokumentasi dibuat, termasuk perubahan typography yang belum committed. Tidak ada source aplikasi yang diubah.
+Audit mencakup `frontend/src/styles.css`, `frontend/src/tailwind.config.js`, `frontend/src/App.tsx`, `frontend/src/components/Modal.tsx`, `frontend/src/features/categories/CategoryManagement.tsx`, `frontend/src/features/categories/icons.tsx`, `frontend/src/features/entities/EntityForm.tsx`, `frontend/src/features/map/EntityMap.tsx`, dan `frontend/index.html`. Catatan menggambarkan implementasi kategori dan typography dalam working tree saat diverifikasi. Perilaku visual browser belum diuji.
 
 ## Prinsip dan identitas visual
 
@@ -39,13 +39,18 @@ Token efek yang digunakan: `--shadow-soft: 0 12px 34px rgb(36 49 41 / 8%)` untuk
 
 ### Warna kategori dan status yang benar-benar dirender
 
-Warna ini ditulis langsung pada selector CSS, bukan diambil dari semantic token bersama.
+Warna kategori entity dan marker berasal dari preset `COLOR_PALETTE` di `features/categories/icons.tsx`; renderer memakai key allowlisted dan tidak memakai hex input pengguna.
 
 | Makna | Foreground/marker | Latar atau perlakuan |
 |---|---|---|
-| Vehicle icon/tag | `#D96D32`; marker `#E77A39` | `#FFF0E6` |
-| IoT device icon/tag | `#177E83`; marker `#14858A` | `#E8F5F3` |
-| Facility icon/tag | `#705CAC`; marker `#7562B7` | `#F0EDFA` |
+| Orange | `#ED7B3B` | `#FFF2E9` |
+| Teal | `#14858A` | `#E8F5F3` |
+| Violet | `#7562B7` | `#F0EDFA` |
+| Blue | `#3978B7` | `#EDF3FB` |
+| Green | `#18815C` | `#E6F4EC` |
+| Rose | `#C54B68` | `#FBECEF` |
+| Slate | `#526056` | `#EDF0ED` |
+| Amber | `#9A6C1D` | `#FFF4DF` |
 | Active | `#287950` | `#E9F5ED` |
 | Inactive | `#737E76` | `#EEF1EE` |
 | Maintenance | `#9A6C1D` | `#FFF4DF`; marker bergaris putus-putus |
@@ -91,13 +96,14 @@ Entity panel menggunakan kolom flex: heading dan filter di atas, list scrollable
 
 ## Komponen UI
 
-Styling memakai class CSS, bukan design-system component library. Hanya `Modal` merupakan komponen UI reusable terpisah. `EntityForm` dan `EntityMap` komponen fitur; drawer, toast, badge, row, card, serta pola button/input/select didefinisikan di `App.tsx`/`styles.css`.
+Styling memakai class CSS, bukan design-system component library. `Modal`, `CategoryGlyph`, dan `CategoryMarker` reusable; `EntityForm`, `EntityMap`, dan `CategoryManagement` komponen fitur. Drawer, toast, badge, row, card, serta pola button/input/select didefinisikan lokal di fitur/CSS.
 
 | Elemen | Implementasi dan ukuran aktual |
 |---|---|
 | Buttons | Class `.button`: tinggi minimum 42px, radius 9px, font 14px/650. Variasi primary oranye, secondary putih bergaris, danger merah, delete-outline. Icon button 36×36px. |
 | Inputs | Native input/textarea; field form tinggi minimum 44px, padding 9×11px, radius 8px. Search tinggi 40px; filter select 42px. Label berada di atas field. |
 | Selects | Native `<select>` dengan chevron CSS; filter kategori/status dua kolom, bertumpuk pada 761–820px. |
+| Category card/form | Kartu kategori responsif menampilkan icon, jumlah entity, marker preview, dan aksi. Dialog create/edit memuat grid 24 icon terkurasi dalam 4 grup, 8 swatch warna, 3 bentuk marker, serta preview live. |
 | Badges | Status pill dengan dot, teks + latar berbeda; category tag memakai ikon dan warna kategori. |
 | Cards | Bukan komponen reusable. Entity count, identifier, koordinat, dan deskripsi memakai permukaan, border, dan radius masing-masing. |
 | Dialogs | Komponen `Modal` membungkus native `<dialog>`, `showModal()`, judul ber-`aria-labelledby`, tombol close, dan dismiss melalui Escape/backdrop. Lebar default maksimum 580px, varian form maksimum 680px. |
@@ -110,24 +116,24 @@ Ukuran/radius di atas tidak distandardisasi melalui token. Perbedaan tinggi kont
 ## Peta
 
 - Leaflet memakai tile `tile.openstreetmap.fr/osmfr`, attribution OpenStreetMap/OSM France, dan font UI yang diwariskan. Titik awal Indonesia `[-2.5, 118]`, zoom 5.
-- Marker memakai custom `DivIcon` box 42px (selected 48px), glyph kategori, dan body 40px dengan border putih 2px serta shadow. Selected memakai scale CSS 1.12. Warna kategori tercatat pada tabel di atas.
+- Marker memakai Leaflet `DivIcon` 56×56px dengan glyph Lucide dari allowlist 24 key terkurasi (Vehicle, IoT, Facility, General). Body 40px memakai warna kategori, border putih 2px, dan shadow. Bentuk tersedia: Pin (`border-radius` tear drop + rotasi), Circle, Rounded square. Anchor popup menyesuaikan bentuk.
 - Inactive marker opacity 0.58 dan desaturasi; maintenance memakai border dashed. Selected marker membesar dan mendapat ring oranye transparan; hover juga memperbesar marker.
-- Popup berisi ikon kategori, nama/kode, status, koordinat, dan tombol ke detail. Tooltip marker berisi kode + nama.
-- Kontrol map custom berada di kiri atas: zoom in/out dan fit all atau center selected. Legend kategori ada di kiri bawah; judul legend disembunyikan pada breakpoint ≤820px.
+- Popup berisi ikon/nama kategori aktual, nama/kode entity, status, koordinat, dan tombol ke detail. Tooltip marker berisi kode + nama. Marker clickable; config icon/color/shape berasal dari respons entity dan diperbarui setelah invalidasi query.
+- Kontrol map custom berada di kiri atas: zoom in/out dan fit all atau center selected. Legend kiri bawah berasal dari daftar kategori backend, menampilkan glyph/warna/bentuk, dan dapat scroll saat kategori banyak; judul disembunyikan pada breakpoint ≤820px.
 - Picker koordinat hanya aktif dari form; hint status dengan tombol Cancel muncul di map. Map kosong menampilkan note, bukan legend yang dihilangkan.
 
-Kategori icon, marker, legend, dan select frontend masih dipetakan ke tiga nilai hardcoded (`vehicle`, `iot_device`, `facility`). Backend category-management yang sedang dikerjakan belum membuat UI kategori dinamis. Selaraskan pemetaan UI saat integrasi selesai; jangan anggap kemampuan kategori baru sudah tampil.
+Kategori dropdown, filter, list/detail, marker, dan legend memakai data kategori API. Icon renderer memakai allowlist lokal bersama picker; backend memvalidasi key, warna, dan bentuk dengan allowlist yang sama. Tidak ada SVG/HTML arbitrary dari input. Frontend default unknown key ke MapPin/orange/pin agar metadata lama/tidak dikenal tidak membuat marker rusak.
 
 ## Interaction states
 
 - **Hover:** tombol berubah warna/shadow; row berubah latar; marker membesar; link teks bergaris bawah.
 - **Active/selected:** tombol menekan 1px; row mendapat latar hangat dan inset orange bar; marker mendapat ring/scale; toggle mobile memakai `aria-pressed` dan latar putih.
 - **Focus:** `:focus-visible` global memberi outline oranye 3px dengan offset 2px. Search/select/form field memakai border + glow oranye; beberapa field menetapkan `outline: 0`, jadi konsistensi ring keyboard perlu diuji.
-- **Loading:** lima skeleton row beranimasi; jumlah memakai em dash; tombol save/delete disable dan menampilkan spinner.
+- **Loading:** lima skeleton row entity; kartu kategori skeleton; jumlah memakai em dash; tombol save/delete disable dan menampilkan spinner.
 - **Disabled:** tombol cursor `not-allowed`, opacity `.62`; fieldset form disabled saat submit.
-- **Empty:** state berbeda untuk workspace kosong dan filter tanpa hasil; tombol add/clear sesuai konteks. Map mempertahankan note kosong.
-- **Error:** list menampilkan error + retry; field/server validation error memakai teks merah; toast error role alert.
-- **Success:** toast success untuk create/update/delete/copy. Toast bersifat sementara dan dapat ditutup.
+- **Empty:** state berbeda untuk workspace kosong, filter tanpa hasil, daftar kategori kosong, dan pencarian kategori tanpa hasil. Map mempertahankan note kosong.
+- **Error:** list/kategori menampilkan error + retry; field/server validation error memakai teks merah; toast error role alert. Delete kategori in-use menjelaskan kegagalan dan mempertahankan dialog.
+- **Success:** toast entity dan notice kategori untuk create/update/delete; toast koordinat untuk copy. Pesan dapat ditutup/hilang otomatis sesuai komponen.
 - **Reduced motion:** animasi/transisi dipangkas lewat `prefers-reduced-motion`.
 
 ## Accessibility
@@ -143,6 +149,6 @@ Kontras belum dihitung dan keyboard/screen-reader/browser belum diuji. Warna mut
 - Split workspace dan adaptasi mobile terlihat pada source; konteks keputusan UI ada di [DEC-012](DECISION.md#dec-012--workspace-dirancang-ulang-agar-daftar-dan-peta-tetap-berdampingan). Form/dialog native dirujuk ke [DEC-013](DECISION.md#dec-013--form-entity-dan-dialog-diperbaiki-tanpa-ui-framework-tambahan).
 - Plus Jakarta Sans dan skala tipografi diminta dalam konteks produk; rekonstruksi dicatat di [DEC-014](DECISION.md#dec-014--plus-jakarta-sans-dan-skala-typography-konsisten). Riwayat teknis/alternatif tetap di `DECISION.md`, bukan diulang di sini.
 - Styling aktual berpusat di `styles.css`; `tailwind.config.js` memiliki `theme.extend: {}` dan plugin kosong. Tailwind directives ada, tetapi komponen menggunakan class CSS khusus. Utility/theme Tailwind bukan sumber token saat ini.
-- Semantic color token belum mencakup seluruh literal; sebagian token root tidak dipakai. Tidak ada spacing/radius scale, komponen visual lintas fitur, atau satu sumber kategori frontend.
-- Prioritas perbaikan: verifikasi contrast/focus/browser terlebih dahulu; kemudian konsolidasikan token yang benar-benar berulang dan sambungkan warna/icon kategori ke data kategori tanpa menduplikasi pemetaan. Jangan menambah library hanya untuk menyelesaikan inkonsistensi kecil.
-- Keputusan kategori dan status implementasi dirujuk ke [DEC-004](DECISION.md#dec-004--kategori-awal-dibatasi-ke-tiga-string-tetap) dan [DEC-015](DECISION.md#dec-015--kategori-menjadi-data-terkelola-dengan-id-stabil-dan-migrasi-kompatibel). Rincian API/data tetap di [ARCHITECTURE.md](ARCHITECTURE.md), [API.md](API.md), dan [DATABASE.md](DATABASE.md).
+- Semantic color token belum mencakup seluruh literal; sebagian token root tidak dipakai. Tidak ada spacing/radius scale. Registry icon/palette merupakan satu sumber frontend; backend mempertahankan allowlist validasi terpisah untuk trust boundary.
+- Prioritas berikutnya: verifikasi contrast/focus/browser, khususnya bentuk Pin, ukuran legend saat banyak kategori, dialog, dan navigasi keyboard. Jangan menyatakan accessibility compliance tanpa pemeriksaan browser/kontras.
+- Keputusan kategori dan customization dirujuk ke [DEC-015](DECISION.md#dec-015--kategori-menjadi-data-terkelola-dengan-id-stabil-dan-migrasi-kompatibel) dan [DEC-016](DECISION.md#dec-016--icon-kategori-dan-marker-peta-memakai-allowlist-terkurasi). Rincian API/data tetap di [ARCHITECTURE.md](ARCHITECTURE.md), [API.md](API.md), dan [DATABASE.md](DATABASE.md).
