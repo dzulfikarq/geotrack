@@ -45,3 +45,10 @@ Kegagalan percobaan awal dan hal yang belum dites dicatat terpisah di [docs/TEST
 - Bedakan kebutuhan/keputusan Human dari pilihan teknis Agentic AI. Jangan mengarang alasan, tanggal, alternatif, atau reasoning internal; tulis **Tidak terverifikasi** bila bukti tidak tersedia.
 - Catat keputusan yang berdampak pada arsitektur, data, kontrak API, keamanan, dependensi utama, atau UX produk. Jangan catat aktivitas rutin dan detail implementasi kecil.
 - Perbarui tautan README bila lokasi dokumen berubah. Pastikan perubahan source/docs konsisten dengan [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), lalu verifikasi referensi commit/file sebelum commit.
+
+## Design system UI/UX
+
+- Sebelum mengubah UI/UX, baca [docs/DESIGN.md](docs/DESIGN.md) dan periksa implementasi aktual di `frontend/src/`.
+- Jika perubahan UI mengubah token, typography, komponen, layout, responsive behavior, map visual, atau accessibility pattern, perbarui `docs/DESIGN.md` dalam perubahan yang sama.
+- Bedakan implementasi saat ini dari rekomendasi/improvement opportunity. Jangan klaim browser behavior, contrast, atau accessibility telah diverifikasi tanpa test; rujuk [docs/TESTING.md](docs/TESTING.md).
+- Hindari duplikasi: stack/alur teknis ada di [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), decision history di [docs/DECISION.md](docs/DECISION.md), dan visual contract di `docs/DESIGN.md`.

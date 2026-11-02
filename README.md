@@ -97,6 +97,7 @@ Perintah ini menambahkan `VEH-001`, `IOT-001`, dan `FAC-001`, satu per kategori.
 | [Pengujian](docs/TESTING.md) | Perintah dan hasil passed, failed, serta not tested |
 | [Batasan](docs/LIMITATIONS.md) | Fitur di luar lingkup, known issues, dan hal yang belum diverifikasi |
 | [Riwayat keputusan](docs/DECISION.md) | Rekonstruksi keputusan engineering, tingkat bukti, dan kebijakan pencatatan berikutnya |
+| [Design system](docs/DESIGN.md) | Visual system aktual: token, typography, komponen, peta, responsive, dan accessibility |
 | [AGENT.md](AGENT.md) | Workflow, kebijakan pencatatan keputusan, dan catatan review/verifikasi Agentic AI |
 
 Spesifikasi PRD dan Architecture yang semula berada di root sudah direkonsiliasi ke [`docs/PRD.md`](docs/PRD.md) dan [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). File sumber root dihapus atas permintaan agar tidak ada dokumentasi duplikat.

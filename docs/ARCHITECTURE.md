@@ -28,7 +28,7 @@ Frontend tidak mengakses database. Server mengembalikan data; frontend memperbar
 | Area | Pilihan aktual | Alasan/kondisi |
 |---|---|---|
 | Frontend | React 18, TypeScript, Vite | Stack frontend yang diminta; Vite menyediakan dev server dan build. |
-| Styling | Tailwind CSS + stylesheet lokal | Utility terbatas dipakai bersama CSS dashboard khusus. |
+| Styling | Tailwind CSS + stylesheet lokal | Theme Tailwind kosong; style aktual didominasi CSS khusus. Detail visual ada di [DESIGN.md](DESIGN.md). |
 | UI dan ikon | Elemen native, `<dialog>`, Lucide React | Dialog native cukup untuk form/konfirmasi; shadcn/ui/Radix tidak dipasang. |
 | Peta | React Leaflet, Leaflet, tile OpenStreetMap | Peta tanpa API key berbayar; tile publik memerlukan internet dan tidak ditujukan untuk skala produksi. |
 | Data/form client | TanStack Query, React Hook Form, Zod | Cache API dan invalidasi write; validasi client bersandingan dengan validasi backend. |
@@ -55,7 +55,8 @@ geotrack/
 │   ├── USER_GUIDE.md
 │   ├── TESTING.md
 │   ├── LIMITATIONS.md
-│   └── DECISION.md
+│   ├── DECISION.md
+│   └── DESIGN.md
 ├── backend/
 │   ├── .env.example
 │   ├── go.mod
@@ -117,9 +118,9 @@ Kode UI sudah disusun untuk layout responsif, tetapi layout dan interaksi belum 
 ## Peta dan koordinat
 
 - Titik awal peta adalah Indonesia pada koordinat `[-2.5, 118]`, zoom `5`. Jika ada satu entity, peta menuju lokasi tersebut; jika lebih dari satu, bounds marker di-fit. Jika tidak ada data, peta tetap dapat di-pan/zoom di titik awal.
-- Marker dibuat sebagai `CircleMarker`: oranye untuk vehicle, teal untuk IoT device, ungu untuk facility. Inactive dibuat lebih transparan, maintenance memakai garis putus-putus, dan pilihan diberi outline lebih tebal.
+- Marker dibuat sebagai Leaflet `DivIcon`: oranye untuk vehicle, teal untuk IoT device, ungu untuk facility. Inactive dibuat lebih transparan, maintenance memakai garis putus-putus, dan pilihan diberi ring/scale.
 - Klik marker membuka pilihan/popup; klik baris memilih entity dan memindahkan peta (`flyTo`). Detail UI tidak menampilkan UUID internal.
-- Tile layer mencantumkan attribution OpenStreetMap. CSS Leaflet dimuat dari `main.tsx`; penggunaan `CircleMarker` tidak memerlukan file ikon marker PNG bawaan.
+- Tile layer mencantumkan attribution OpenStreetMap. CSS Leaflet dimuat dari `main.tsx`; marker memakai `DivIcon` berisi SVG inline, bukan file ikon PNG bawaan.
 - Picker diaktifkan eksplisit dari form. Mode tersebut menutup sementara dialog agar map event bisa diterima; klik koordinat mengisi latitude/longitude memakai `setValue` dengan validasi Zod, lalu form dibuka kembali. Klik map biasa tidak mengubah form.
 
 Endpoint dan kontrak lengkap: [API.md](API.md). Persistensi dan schema: [DATABASE.md](DATABASE.md).
