@@ -7,10 +7,12 @@ Dokumen ini mencatat pekerjaan yang benar-benar dilakukan dalam sesi implementas
 1. Membaca prompt master yang dilampirkan pengguna dan dua spesifikasi sumber: PRD serta Architecture.
 2. Memeriksa repository. Saat pekerjaan dimulai, repository belum berisi aplikasi; dua spesifikasi sumber berada di root sebagai file untracked. Pada tahap konsolidasi, informasinya dipindahkan ke `docs/PRD.md` dan `docs/ARCHITECTURE.md`, lalu file root dihapus atas permintaan pengguna.
 3. Membuat backend Go/Gin dengan SQLite, frontend React/TypeScript, test, konfigurasi ignore, dan dokumentasi.
-4. Menjalankan test, typecheck, build, audit dependency, smoke test API melalui HTTP, serta smoke test server Vite.
-5. Setelah permintaan dokumentasi, membaca ulang implementasi aktual dan menulis ulang README serta menambahkan dokumen rinci berbahasa Indonesia. Perubahan pada sesi dokumentasi ini terbatas pada Markdown; source aplikasi tidak diubah.
+4. Menjalankan test/vet Go, lint/test/typecheck/build/audit frontend, HTTP API acceptance, dan acceptance UI otomatis di Chrome desktop/mobile.
+5. Memperbaiki feedback/retry/loading dan cache invalidation UI; menambah lint, lazy-load halaman kategori, serta pemisahan vendor chunks.
+6. Memperbarui toolchain Go dan dependency terkait setelah `govulncheck` menemukan jalur kerentanan yang terjangkau.
+7. Menyelaraskan dokumentasi dan menyimpan screenshot browser asli di `docs/assets/`.
 
-Alat yang digunakan: pembacaan/pencarian file, patch file, shell PowerShell, Go toolchain, npm, dan HTTP lokal. Tidak ada subagent, browser automation, deployment, push, atau commit.
+Alat yang digunakan: pembacaan/pencarian file, patch file, shell PowerShell, Go toolchain, npm, HTTP lokal, serta Chrome headless melalui Chrome DevTools Protocol. Tidak ada subagent, deployment, push, atau review manusia. Perubahan sesi ini dicatat dalam commit lokal; tidak ada push.
 
 ## Kontribusi AI
 
@@ -21,20 +23,18 @@ Alat yang digunakan: pembacaan/pencarian file, patch file, shell PowerShell, Go 
 
 ## Review manusia
 
-Tidak ada tinjauan atau pengujian manusia yang tercatat dalam sesi ini. Tinjauan manusia dan acceptance test browser masih diperlukan. Jangan menganggap UI, aksesibilitas di browser, marker, tile peta, atau layout responsif telah disetujui manusia.
+Tidak ada tinjauan atau pengujian manusia yang tercatat. Acceptance UI otomatis di Chrome lulus pada cakupan yang dirinci dalam [docs/TESTING.md](docs/TESTING.md), tetapi bukan persetujuan manusia. Keyboard/screen reader, kontras, dan perilaku aksesibilitas belum diverifikasi; jangan klaim compliance.
 
 ## Ringkasan hasil verifikasi
 
-- `go test ./...` — passed.
-- `go vet ./...` — passed.
-- `npm test` — passed, 3 test skema dalam 1 file.
-- `npm run typecheck` — passed.
-- `npm run build` — passed; Vite mengeluarkan dua peringatan Rollup non-fatal tentang posisi komentar anotasi di dependency Zod v4.
-- `npm audit` — passed, 0 vulnerability pada pemeriksaan terakhir.
-- Smoke test API lokal — passed untuk health, create koordinat `(0, 0)`, list, update koordinat, baca ulang data, delete, dan `404` setelah delete.
-- Smoke test Vite — passed untuk penyajian HTML entry yang memuat identitas GeoTrack dan `/src/main.tsx`; ini bukan test render browser.
+- Go `1.26.10`; `go test ./...` dan `go vet ./...` — passed.
+- `govulncheck` — 0 vulnerability dengan symbol path yang terjangkau; scanner masih melaporkan 2 package dan 1 module yang tidak terjangkau.
+- Frontend ESLint — passed tanpa warning; Vitest 10 test/5 file; typecheck dan production build — passed.
+- `npm audit` — 0 vulnerability.
+- HTTP API acceptance — entity/category CRUD, validasi/duplikasi, proteksi kategori terpakai, serta persistensi setelah restart — passed.
+- Chrome acceptance desktop 1440×1000 dan mobile 390×844 — alur utama lulus; screenshot di `docs/assets/`. Detail cakupan dan batasnya ada di [docs/TESTING.md](docs/TESTING.md).
 
-Kegagalan percobaan awal dan hal yang belum dites dicatat terpisah di [docs/TESTING.md](docs/TESTING.md). Tidak ada klaim bahwa seluruh acceptance criteria telah lulus.
+Warning build Zod dan hal yang belum diuji dicatat di [docs/TESTING.md](docs/TESTING.md). Acceptance test tidak mencakup semua requirement atau menggantikan review manusia.
 
 ## Kebijakan pencatatan keputusan
 

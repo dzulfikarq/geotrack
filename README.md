@@ -5,14 +5,23 @@ GeoTrack adalah aplikasi web untuk mengelola entitas berlokasi geografis—kenda
 ## Fitur
 
 - CRUD entitas melalui REST API Go dan penyimpanan SQLite.
+- CRUD kategori dengan icon, warna, bentuk marker, dan jumlah entity.
 - Peta OpenStreetMap dengan marker kategori, pemilihan entitas, popup, dan detail.
 - Form create/edit dengan validasi di frontend dan backend.
 - Pencarian berdasarkan kode/nama serta filter kategori dan status yang dapat digabung.
 - Pemilih koordinat melalui klik peta; koordinat `(0, 0)` valid.
-- Umpan balik pemuatan (loading), error, daftar kosong (empty), dan sukses (success) pada antarmuka.
+- State loading, error/retry, empty, validasi, dan feedback sukses/error untuk operasi.
 - Seed data pengembangan yang dijalankan secara eksplisit, bukan otomatis.
 
-> Pemeriksaan browser untuk tampilan, marker, tile peta, dan layout responsif belum dilakukan. Rincian ada di [batasan](docs/LIMITATIONS.md) dan [hasil pengujian](docs/TESTING.md).
+Acceptance test dijalankan di Chrome pada 2 November 2026. Screenshot memperlihatkan data demo dan bukan mockup.
+
+### Map Explorer
+
+![Map Explorer GeoTrack di Chrome](docs/assets/map-explorer.png)
+
+### Category Management
+
+![Category Management GeoTrack di Chrome](docs/assets/category-management.png)
 
 ## Teknologi
 
@@ -21,17 +30,18 @@ GeoTrack adalah aplikasi web untuk mengelola entitas berlokasi geografis—kenda
 | Frontend | React, TypeScript, Vite, Tailwind CSS |
 | Data dan form | TanStack Query, React Hook Form, Zod |
 | Peta | React Leaflet, Leaflet, tile OpenStreetMap |
-| Backend | Go, Gin |
+| Backend | Go 1.26.10+, Gin |
 | Database | SQLite melalui `database/sql` dan `modernc.org/sqlite` (tanpa CGO) |
 | Pengujian frontend | Vitest |
+| Lint frontend | ESLint dengan aturan React, React Hooks, dan TypeScript |
 | Orkestrasi development | `concurrently` dari root repository |
 
 Antarmuka menggunakan elemen HTML native untuk dialog; shadcn/ui tidak dipakai.
 
 ## Persyaratan
 
-- Go 1.23 atau lebih baru.
-- Node.js 20 atau lebih baru dan npm.
+- Go 1.26.10 atau lebih baru (patch ini memperbaiki advisory standard library yang terjangkau).
+- Node.js 20.19+, 22.13+, atau 24+ dan npm (minimum yang didukung ESLint 10).
 - Dependensi npm root dan frontend (dipasang pada langkah setup di bawah).
 - Akses internet untuk memuat tile OpenStreetMap.
 
@@ -44,8 +54,8 @@ Perintah berikut dijalankan dari root repository. `npm run dev` memulai backend 
 ### Windows — PowerShell
 
 ```powershell
-npm install
-npm --prefix frontend install
+npm ci
+npm --prefix frontend ci
 npm run dev
 ```
 
@@ -53,12 +63,12 @@ npm run dev
 
 ```sh
 cd /path/to/geotrack
-npm install
-npm --prefix frontend install
+npm ci
+npm --prefix frontend ci
 npm run dev
 ```
 
-Backend tersedia di `http://localhost:8080`, frontend di `http://localhost:5173`. `predev` memeriksa Go 1.23+, dependensi `concurrently`, dan dependensi Vite frontend sebelum startup. Jika prasyarat kurang, script menjelaskan langkah perbaikannya. Untuk memulihkan dependensi: jalankan `npm install` di root dan `npm --prefix frontend install`.
+Backend tersedia di `http://localhost:8080`, frontend di `http://localhost:5173`. `predev` memeriksa Go 1.26.10+, dependensi `concurrently`, dan Vite frontend sebelum startup. Jika prasyarat kurang, script menjelaskan langkah perbaikannya. Untuk memulihkan dependency sesuai lockfile: jalankan `npm ci` di root dan `npm --prefix frontend ci`.
 
 Untuk menjalankan satu proses saja, dari root gunakan `npm run dev:backend` atau `npm run dev:frontend`.
 
@@ -113,9 +123,10 @@ go vet ./...
 
 # frontend/
 npm test
+npm run lint
 npm run typecheck
 npm run build
 npm audit
 ```
 
-Semua command di atas berhasil pada pemeriksaan terakhir; `npm audit` melaporkan 0 vulnerability. Build Vite memberi dua warning Rollup non-fatal dari komentar anotasi dependency Zod. Smoke test API juga berhasil untuk health, create `(0, 0)`, list, update, baca ulang data, dan delete. **Alur antarmuka belum diuji di browser.** Hasil lengkap, kegagalan percobaan awal, dan hal yang belum diuji: [TESTING.md](docs/TESTING.md).
+Pemeriksaan terakhir lulus untuk test/vet backend; lint, 10 test Vitest, typecheck, build, dan `npm audit` (0 vulnerability) frontend. API CRUD, validasi, persistensi setelah restart; serta browser acceptance desktop/mobile juga diuji. Build memisahkan React/Leaflet ke vendor chunks; dua warning komentar Rollup dari dependency Zod masih ada. Detail dan cakupan: [TESTING.md](docs/TESTING.md).

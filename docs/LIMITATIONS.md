@@ -4,11 +4,9 @@ Dokumen ini membedakan fitur yang memang di luar lingkup, keterbatasan implement
 
 ## Belum selesai atau belum diverifikasi
 
-- **Acceptance test browser belum dilakukan.** Build/typecheck dan unit marker markup tidak membuktikan React Leaflet benar-benar mount/update di browser. Popup, picker, category/entity CRUD UI, dialog, keyboard/focus, dan breakpoint responsive perlu diperiksa manual.
-- **Tile peta belum diverifikasi.** Client memakai tile publik OpenStreetMap; perlu internet. Attribution ada di UI, tetapi ketersediaan tile aktual belum diuji. Endpoint publik tidak ditujukan untuk beban produksi.
-- **Review manusia belum tercatat.** Source dan dokumentasi dibuat/diperiksa oleh AI; reviewer manusia perlu meninjau perilaku, keamanan, dan isi sebelum pengumpulan/deployment.
+- **Review manusia belum tercatat.** Acceptance UI otomatis Chrome lulus pada cakupan di [TESTING.md](TESTING.md), tetapi reviewer manusia masih perlu meninjau perilaku, keamanan, desain, dan dokumentasi sebelum submission/deployment.
+- **Aksesibilitas belum diaudit.** Keyboard/focus order, screen reader, kontras, zoom teks, dan WCAG belum diverifikasi; jangan anggap interaksi visual/otomatis sebagai bukti compliance.
 - **Linux/macOS quick start belum dijalankan.** Command didokumentasikan, tetapi smoke runtime dilakukan di Windows.
-- **Lint frontend belum tersedia.** `package.json` tidak mempunyai lint script/dependency; typecheck dijalankan sebagai pemeriksaan statis.
 
 ## Isu yang diketahui
 
@@ -21,7 +19,8 @@ Dokumen ini membedakan fitur yang memang di luar lingkup, keterbatasan implement
 - Migrasi kategori memiliki versi 2–3 dan memigrasikan schema entity legacy secara idempotent. Belum ada migration framework eksternal atau prosedur backup/restore database otomatis.
 - Seed memasukkan kategori dan entity satu per satu, bukan dalam transaksi. Kegagalan di tengah dapat meninggalkan sebagian seed; kategori dengan nama sama dan kode entity yang telah ada dilewati, tidak diperbarui.
 - Backend membaca environment proses dan tidak memuat `.env`. Contoh `.env.example` bukan konfigurasi otomatis.
-- Vite build sukses tetapi mengeluarkan dua warning Rollup tentang posisi komentar anotasi di dependency Zod v4 dan warning bundle JavaScript minified >500 kB. Semua warning non-fatal; belum ditangani.
+- Vite build sukses; dua warning Rollup non-fatal terkait komentar anotasi di dependency Zod v4 masih muncul. Warning ukuran chunk sudah hilang setelah pemisahan vendor chunk dan lazy-load Category Management.
+- `govulncheck` menemukan 0 jalur vulnerability yang terjangkau. Scanner tetap melaporkan 2 vulnerability package-level dan 1 module-level pada dependency yang tidak dipanggil oleh code path terjangkau; toolchain Go dinaikkan ke 1.26.10 dan `golang.org/x/net` ke 0.60.0.
 - API tidak memasang graceful shutdown khusus untuk `SIGINT`/`SIGTERM`.
 
 ## Di luar lingkup produk
@@ -35,7 +34,7 @@ Fitur berikut tidak diimplementasikan, bukan bug yang diklaim selesai:
 
 ## Verifikasi yang masih disarankan
 
-1. Jalankan aplikasi di browser dengan API aktif dan seed opsional.
-2. Uji create/detail dari row dan marker/edit koordinat/delete cancel-confirm/reload/filter.
-3. Periksa tile/attribution, mobile layout, keyboard/focus, serta kegagalan API.
+1. Minta reviewer manusia meninjau screenshot dan alur utama, lalu periksa keyboard/focus, screen reader, dan kontras.
+2. Jalankan quick start pada Linux/macOS jika platform tersebut termasuk target.
+3. Uji database rusak/terkunci, concurrency, dan recovery jaringan sebelum deployment.
 4. Review kebijakan deployment, CORS, backup, dan layanan tile sebelum penggunaan di luar demo lokal.

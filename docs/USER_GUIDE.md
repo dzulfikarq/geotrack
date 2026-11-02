@@ -1,6 +1,6 @@
 # Panduan pengguna
 
-Panduan ini menjelaskan antarmuka yang tersedia di kode aktual. Alur UI belum diuji manual di browser; lihat [status pengujian](TESTING.md).
+Panduan ini menjelaskan antarmuka aktual. Alur utama diuji dengan otomasi Chrome, bukan review manusia; cakupan dan batasnya ada di [status pengujian](TESTING.md).
 
 ## 1. Jalankan aplikasi
 

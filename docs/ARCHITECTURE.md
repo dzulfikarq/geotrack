@@ -21,7 +21,7 @@ Browser
        SQLite (modernc, no-CGO)
 ```
 
-Frontend tidak mengakses database. Server mengembalikan data; frontend memperbarui cache setelah write berhasil. Query kategori memasok form entity, filter, halaman manajemen, dan legend; respons entity menyertakan metadata kategori untuk row, detail, dan marker. Entity list mendukung filter `q`, `category_id`, legacy `category`, dan `status`. Save kategori menginvalidation query kategori dan entity agar visual map tersinkron.
+Frontend tidak mengakses database. Server mengembalikan data; frontend memperbarui cache setelah write berhasil. Query kategori memasok form entity, filter, halaman manajemen, dan legend; respons entity menyertakan metadata kategori untuk row, detail, dan marker. Entity list mendukung filter `q`, `category_id`, legacy `category`, dan `status`. Mutasi entity menginvalidasi entity serta category (untuk `entity_count`); mutasi category menginvalidasi kedua query agar relasi dan visual marker tersinkron.
 
 ## Stack aktual
 
@@ -32,9 +32,10 @@ Frontend tidak mengakses database. Server mengembalikan data; frontend memperbar
 | UI dan ikon | Elemen native, `<dialog>`, Lucide React | Dialog native cukup untuk form/konfirmasi; shadcn/ui/Radix tidak dipasang. |
 | Peta | React Leaflet, Leaflet, tile OpenStreetMap | Peta tanpa API key berbayar; tile publik memerlukan internet dan tidak ditujukan untuk skala produksi. |
 | Data/form client | TanStack Query, React Hook Form, Zod | Cache API dan invalidasi write; validasi client bersandingan dengan validasi backend. |
-| Backend | Go `1.23.0`, Gin | REST API, logger, recovery, dan middleware CORS. |
+| Backend | Go `1.26.10+`, Gin | REST API, logger, recovery, dan middleware CORS. Batas versi mengikuti patch standard library yang diperlukan. |
 | Database | `database/sql`, `modernc.org/sqlite` | SQLite lokal tanpa server DB tambahan dan tanpa CGO. |
 | Test frontend | Vitest | Unit schema entity/kategori dan render markup marker allowlisted. |
+| Lint frontend | ESLint 10, `typescript-eslint`, plugin React Hooks | `npm run lint`; dependency development saja. |
 
 Repository langsung dipanggil handler; belum ada service layer terpisah. Tidak ada router client, state store global, autentikasi, atau WebSocket.
 
@@ -56,7 +57,8 @@ geotrack/
 │   ├── TESTING.md
 │   ├── LIMITATIONS.md
 │   ├── DECISION.md
-│   └── DESIGN.md
+│   ├── DESIGN.md
+│   └── assets/{map-explorer,category-management}.png
 ├── backend/
 │   ├── .env.example
 │   ├── go.mod
@@ -77,6 +79,7 @@ geotrack/
     ├── index.html
     ├── package.json
     ├── package-lock.json
+    ├── eslint.config.js
     ├── vite.config.ts
     ├── tailwind.config.js
     ├── postcss.config.js
@@ -108,7 +111,7 @@ geotrack/
 
 Jika query GET gagal, panel menyediakan pesan error dan tombol retry. Setelah save sukses, filter dibersihkan agar entitas create/update tidak tersembunyi oleh filter lama.
 
-Kode UI sudah disusun untuk layout responsif, tetapi layout dan interaksi belum diperiksa di browser; lihat [TESTING.md](TESTING.md).
+Category Management baru diunduh saat halaman pertama kali dibuka. Build memisahkan React dan Leaflet ke vendor chunks; Leaflet tetap tersedia saat Map Explorer dibuka. Chrome acceptance memeriksa alur utama pada 1440×1000 dan 390×844; screenshot serta batas test dicatat di [TESTING.md](TESTING.md). Keyboard/screen reader/kontras belum diaudit.
 
 ## Alur backend
 
@@ -140,7 +143,7 @@ Endpoint dan kontrak lengkap: [API.md](API.md). Persistensi dan schema: [DATABAS
 
 ## Keputusan dan konsekuensi
 
-- Rekonstruksi keputusan historis dan kebijakan pencatatan ada di [DECISION.md](DECISION.md). Category CRUD/marker customization serta Plus Jakarta Sans menggambarkan source saat ini; status verifikasi ada di [TESTING.md](TESTING.md).
+- Rekonstruksi keputusan historis dan kebijakan pencatatan ada di [DECISION.md](DECISION.md). Category CRUD/marker customization, security patch, serta code splitting menggambarkan source saat ini; status verifikasi ada di [TESTING.md](TESTING.md).
 - Penyimpanan lokal SQLite menjaga setup sederhana, tetapi bukan desain high-availability.
 - Pool DB dibatasi satu koneksi agar operasi SQLite terserialisasi. Ini membatasi throughput baca; belum diukur.
 - Schema SQL di-embed dan `schema_migrations` mencatat migrasi versi 2–3; belum ada migration framework eksternal.

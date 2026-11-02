@@ -239,3 +239,67 @@ Keputusan berikut pertama terlihat pada commit root `32fe06a` (`2026-11-02 18:04
 - **Pemilik keputusan:** Human untuk kebutuhan produk dan batas aman; AI-assisted untuk susunan katalog, preset, fallback, dan integrasi.
 - **Bukti:** Instruksi implementasi sesi `2026-11-02`; `frontend/src/features/categories/icons.tsx`; `frontend/src/features/map/marker.ts`; `backend/internal/category/model.go`; `backend/internal/category/handler_test.go`; `frontend/src/features/categories/icons.test.ts`; `docs/TESTING.md`.
 - **Tingkat bukti:** Confirmed.
+
+## 9. Pembaruan setelah snapshot DEC-016
+
+Catatan DEC-015/016 menggambarkan status repository pada snapshot terdahulu. Perubahan dan verifikasi berikutnya memperbarui status efektif; narasi historis di atas dipertahankan.
+
+#### DEC-017 — Naikkan versi minimum Go untuk menutup jalur vulnerability terjangkau
+
+- **Tanggal keputusan:** `2026-11-02`.
+- **Konteks:** `govulncheck` menemukan kerentanan standard library yang dapat dicapai dari HTTP server pada Go `1.26.9`, serta advisory reachable pada dependency `golang.org/x/net` versi lama.
+- **Alternatif yang tercatat:** Menunda upgrade akan meninggalkan jalur terjangkau; versi patch lain tidak dievaluasi dalam catatan.
+- **Keputusan:** Tetapkan Go minimum `1.26.10`, upgrade `golang.org/x/net` ke `v0.60.0`, dan sinkronkan pemeriksaan prasyarat serta dokumentasi.
+- **Alasan:** Versi tersebut menutup jalur yang ditemukan; scan ulang melaporkan 0 vulnerability dengan symbol path terjangkau.
+- **Dampak:** Go minimum untuk setup lokal naik. `govulncheck` tetap melaporkan 2 vulnerability package-level dan 1 module-level tanpa call path terjangkau.
+- **Status:** Accepted.
+- **Pemilik keputusan:** AI-assisted.
+- **Bukti:** `backend/go.mod`, `backend/go.sum`, `scripts/check-dev-prereqs.cjs`, `README.md`, `docs/TESTING.md`; output `govulncheck` sebelum dan sesudah upgrade.
+- **Tingkat bukti:** Confirmed.
+
+#### DEC-018 — Sinkronkan cache query turunan dan feedback UI setelah mutasi
+
+- **Tanggal keputusan:** `2026-11-02`.
+- **Konteks:** `entity_count` kategori berasal dari relasi entity; metadata kategori juga dipakai marker/detail. Error/loading kategori dapat membuat Add Entity nonaktif.
+- **Alternatif yang tercatat:** Tidak mencatat pilihan selain invalidasi query terkait; cache manual atau optimistik tidak dievaluasi.
+- **Keputusan:** Mutasi entity menginvalidasi query entity dan kategori; mutasi kategori menginvalidasi keduanya. Tampilkan status koneksi dari query yang diperlukan, alasan Add Entity disabled, retry untuk kegagalan GET, dan error/success feedback mutation.
+- **Alasan:** Cache refetch menjaga jumlah turunan dan metadata visual konsisten dengan server; pesan state menjelaskan kegagalan tanpa menyatakan write berhasil.
+- **Dampak:** Refetch tambahan terjadi setelah write; acceptance Chrome memeriksa jumlah kategori sesudah entity create/delete serta error/retry.
+- **Status:** Accepted.
+- **Pemilik keputusan:** AI-assisted.
+- **Bukti:** `frontend/src/App.tsx`; `frontend/src/features/categories/CategoryManagement.tsx`; `docs/TESTING.md`.
+- **Tingkat bukti:** Confirmed.
+
+#### DEC-019 — Rapikan dependency frontend dan tambahkan lint statis
+
+- **Tanggal keputusan:** `2026-11-02`.
+- **Konteks:** Dependency lokal `geotrack: file:..` membentuk junction rekursif di `frontend/node_modules`; frontend belum memiliki lint command. Audit dependency lint menemukan advisory `minimatch`; ESLint 9 juga ditandai deprecated pada clean install.
+- **Alternatif yang tercatat:** Mempertahankan ESLint 9 memungkinkan plugin React, tetapi versi itu deprecated. `eslint-plugin-react` belum menerima ESLint 10 peer range; memaksa peer tidak dipilih.
+- **Keputusan:** Hapus dependency lokal yang tidak digunakan; tambahkan ESLint 10 flat config untuk TypeScript dan React Hooks; override `minimatch` ke versi patched `11.0.4`; jangan pasang plugin React yang peer range-nya tidak mendukung ESLint 10.
+- **Alasan:** Hindari junction recursive dan gunakan ESLint yang didukung; ESLint 10 kompatibel dengan `typescript-eslint` dan `eslint-plugin-react-hooks`; override menutup advisory transitive.
+- **Dampak:** Ada devDependencies lint baru; `npm run lint` lulus dan `npm audit` melaporkan 0 vulnerability. Clean install diverifikasi dari lockfile.
+- **Status:** Accepted.
+- **Pemilik keputusan:** AI-assisted.
+- **Bukti:** `frontend/package.json`, `frontend/package-lock.json`, `frontend/eslint.config.js`, `docs/TESTING.md`.
+- **Tingkat bukti:** Confirmed.
+
+#### DEC-020 — Pisahkan vendor frontend dan lazy-load halaman kategori
+
+- **Tanggal keputusan:** `2026-11-02`.
+- **Konteks:** Build awal memperingatkan ukuran chunk JavaScript di atas batas Rollup; halaman category tidak diperlukan sebelum dibuka, sementara map harus siap pada halaman utama.
+- **Alternatif yang tercatat:** Lazy-load Leaflet tidak dipilih agar map tidak tertunda. Angka benchmark runtime tidak tersedia.
+- **Keputusan:** Lazy-load Category Management; pisahkan React dan Leaflet ke vendor chunks, tanpa lazy-load Leaflet.
+- **Alasan:** Muat UI kategori saat dibutuhkan dan kurangi ukuran entry chunk awal tanpa menambah route/runtime dependency.
+- **Dampak:** Chunk utama menjadi 223.86 kB; React vendor 214.18 kB; map vendor 154.92 kB; kategori 14.61 kB. Warning ukuran chunk hilang; dua warning komentar Zod tetap ada.
+- **Status:** Accepted.
+- **Pemilik keputusan:** AI-assisted.
+- **Bukti:** `frontend/src/App.tsx`, `frontend/vite.config.ts`, output production build, `docs/TESTING.md`.
+- **Tingkat bukti:** Confirmed.
+
+## Koreksi status setelah snapshot historis
+
+Catatan pada DEC-013 sampai DEC-015 dan bagian **Catatan konsistensi snapshot** di atas merekam keadaan ketika catatan itu pertama disusun; status in-progress, file uncommitted, kegagalan test migrasi, dan saran untuk memperbarui dokumen bukan status akhir repository. Perubahan berikutnya menyelesaikan integrasi kategori dan migrasi; `go test ./...`, `go vet ./...`, API acceptance, serta Chrome acceptance kini lulus pada cakupan di [TESTING.md](TESTING.md). README, Architecture, API, Database, User Guide, Testing, dan Limitations telah diselaraskan dengan source aktual.
+
+Chrome automation memverifikasi sebagian perilaku visual dan responsif, bukan review manusia. Tidak ada review manusia yang tercatat; keyboard/focus order, screen reader, kontras, dan WCAG tetap belum diaudit. Ini batas efektif terkini untuk DEC-013/014, bukan klaim bahwa seluruh aksesibilitas telah diuji.
+
+DEC-007 juga merekam tile OSM belum pernah dibuktikan pada snapshot awal. Acceptance Chrome berikutnya berhasil memuat 16 tile; hal itu membuktikan ketersediaan saat test saja, bukan layanan jangka panjang atau kesiapan produksi.

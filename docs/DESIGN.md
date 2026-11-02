@@ -1,10 +1,10 @@
 # Design system GeoTrack
 
-> Dokumen ini mencatat UI yang benar-benar ada pada source saat ditinjau. Ia menjadi referensi visual utama; arsitektur dan sejarah keputusan tetap dirujuk ke [ARCHITECTURE.md](ARCHITECTURE.md) dan [DECISION.md](DECISION.md). UI belum diverifikasi melalui acceptance test browser; lihat [TESTING.md](TESTING.md) dan [LIMITATIONS.md](LIMITATIONS.md).
+> Dokumen ini mencatat UI aktual. Acceptance Chrome otomatis memeriksa tampilan desktop/mobile dan menyimpan [screenshot Map Explorer](assets/map-explorer.png) serta [screenshot Category Management](assets/category-management.png); bukan review visual manusia. Keyboard, screen reader, kontras, dan WCAG belum diaudit. Arsitektur dan sejarah keputusan ada di [ARCHITECTURE.md](ARCHITECTURE.md) dan [DECISION.md](DECISION.md).
 
 ## Cakupan dan sumber
 
-Audit mencakup `frontend/src/styles.css`, `frontend/src/tailwind.config.js`, `frontend/src/App.tsx`, `frontend/src/components/Modal.tsx`, `frontend/src/features/categories/CategoryManagement.tsx`, `frontend/src/features/categories/icons.tsx`, `frontend/src/features/entities/EntityForm.tsx`, `frontend/src/features/map/EntityMap.tsx`, dan `frontend/index.html`. Catatan menggambarkan implementasi kategori dan typography dalam working tree saat diverifikasi. Perilaku visual browser belum diuji.
+Audit mencakup `frontend/src/styles.css`, `frontend/src/tailwind.config.js`, `frontend/src/App.tsx`, `frontend/src/components/Modal.tsx`, `frontend/src/features/categories/CategoryManagement.tsx`, `frontend/src/features/categories/icons.tsx`, `frontend/src/features/entities/EntityForm.tsx`, `frontend/src/features/map/EntityMap.tsx`, dan `frontend/index.html`. Perilaku UI utama diperiksa melalui Chrome pada 1440×1000 dan 390×844; screenshot menunjukkan acceptance state dengan data seed. Ini bukan usability atau aksesibilitas review manusia.
 
 ## Prinsip dan identitas visual
 
@@ -129,10 +129,10 @@ Kategori dropdown, filter, list/detail, marker, dan legend memakai data kategori
 - **Hover:** tombol berubah warna/shadow; row berubah latar; marker membesar; link teks bergaris bawah.
 - **Active/selected:** tombol menekan 1px; row mendapat latar hangat dan inset orange bar; marker mendapat ring/scale; toggle mobile memakai `aria-pressed` dan latar putih.
 - **Focus:** `:focus-visible` global memberi outline oranye 3px dengan offset 2px. Search/select/form field memakai border + glow oranye; beberapa field menetapkan `outline: 0`, jadi konsistensi ring keyboard perlu diuji.
-- **Loading:** lima skeleton row entity; kartu kategori skeleton; jumlah memakai em dash; tombol save/delete disable dan menampilkan spinner.
+- **Loading:** lima skeleton row entity; kartu kategori skeleton; jumlah memakai em dash; tombol save/delete disable dan menampilkan spinner. Category Management menampilkan fallback saat chunk lazy-load.
 - **Disabled:** tombol cursor `not-allowed`, opacity `.62`; fieldset form disabled saat submit.
 - **Empty:** state berbeda untuk workspace kosong, filter tanpa hasil, daftar kategori kosong, dan pencarian kategori tanpa hasil. Map mempertahankan note kosong.
-- **Error:** list/kategori menampilkan error + retry; field/server validation error memakai teks merah; toast error role alert. Delete kategori in-use menjelaskan kegagalan dan mempertahankan dialog.
+- **Error:** list/kategori menampilkan error + retry; field/server validation error memakai teks merah; toast error role alert. Kegagalan fetch kategori dan retry diuji di browser; delete kategori in-use menjelaskan kegagalan dan mempertahankan dialog.
 - **Success:** toast entity dan notice kategori untuk create/update/delete; toast koordinat untuk copy. Pesan dapat ditutup/hilang otomatis sesuai komponen.
 - **Reduced motion:** animasi/transisi dipangkas lewat `prefers-reduced-motion`.
 
@@ -142,7 +142,7 @@ Kategori dropdown, filter, list/detail, marker, dan legend memakai data kategori
 
 **Pedoman untuk perubahan berikutnya:** pertahankan teks minimum 12px (body 14px); jangan menyampaikan kategori/status dengan warna saja; pertahankan fokus keyboard yang jelas pada semua kontrol, termasuk kontrol map; pastikan label, nama tombol, urutan tab, dialog focus/close, dan zoom teks tetap berfungsi. Ukur kontras teks kecil dan state disabled terhadap WCAG sebelum menyatakan compliant.
 
-Kontras belum dihitung dan keyboard/screen-reader/browser belum diuji. Warna muted pada caption kecil serta outline kontrol form yang diganti glow perlu ditinjau; panduan di atas bukan klaim compliance.
+Kontras belum dihitung; keyboard dan screen reader belum diuji. Warna muted pada caption kecil serta outline kontrol form yang diganti glow perlu ditinjau; browser automation bukan klaim compliance.
 
 ## Keputusan dan improvement opportunities
 
@@ -150,5 +150,5 @@ Kontras belum dihitung dan keyboard/screen-reader/browser belum diuji. Warna mut
 - Plus Jakarta Sans dan skala tipografi diminta dalam konteks produk; rekonstruksi dicatat di [DEC-014](DECISION.md#dec-014--plus-jakarta-sans-dan-skala-typography-konsisten). Riwayat teknis/alternatif tetap di `DECISION.md`, bukan diulang di sini.
 - Styling aktual berpusat di `styles.css`; `tailwind.config.js` memiliki `theme.extend: {}` dan plugin kosong. Tailwind directives ada, tetapi komponen menggunakan class CSS khusus. Utility/theme Tailwind bukan sumber token saat ini.
 - Semantic color token belum mencakup seluruh literal; sebagian token root tidak dipakai. Tidak ada spacing/radius scale. Registry icon/palette merupakan satu sumber frontend; backend mempertahankan allowlist validasi terpisah untuk trust boundary.
-- Prioritas berikutnya: verifikasi contrast/focus/browser, khususnya bentuk Pin, ukuran legend saat banyak kategori, shortcut map dari category row, dialog, dan navigasi keyboard. Jangan menyatakan accessibility compliance tanpa pemeriksaan browser/kontras.
+- Prioritas berikutnya: review manusia, contrast/focus, khususnya bentuk Pin, ukuran legend saat banyak kategori, shortcut map dari category row, dialog, dan navigasi keyboard. Jangan menyatakan accessibility compliance tanpa audit khusus.
 - Keputusan kategori dan customization dirujuk ke [DEC-015](DECISION.md#dec-015--kategori-menjadi-data-terkelola-dengan-id-stabil-dan-migrasi-kompatibel) dan [DEC-016](DECISION.md#dec-016--icon-kategori-dan-marker-peta-memakai-allowlist-terkurasi). Rincian API/data tetap di [ARCHITECTURE.md](ARCHITECTURE.md), [API.md](API.md), dan [DATABASE.md](DATABASE.md).
