@@ -31,7 +31,7 @@ import { listCategories } from "./features/categories/api";
 import { paginateItems } from "./utils/pagination";
 
 const emptyFilters: EntityFilters = { q: "", categoryId: "", status: "" };
-const ENTITY_PAGE_SIZE = 5;
+const ENTITY_PAGE_SIZE = 10;
 type ToastMessage = { kind: "success" | "error"; message: string };
 
 export default function App() {
@@ -271,10 +271,10 @@ export default function App() {
             </div>
             {!entitiesQuery.isLoading && !entitiesQuery.isError && entities.length > 0 && (
               <nav className="entity-pagination" aria-label="Entity list pagination">
-                <span>Showing {entityPagination.firstItem}–{entityPagination.lastItem} of {entities.length}</span>
+                <span className="entity-pagination-summary">Showing <strong>{entityPagination.firstItem}–{entityPagination.lastItem}</strong> of <strong>{entities.length}</strong></span>
                 <div className="entity-pagination-controls">
                   <button className="icon-button entity-page-button" type="button" aria-label="Previous entities" onClick={() => setEntityPage(entityPagination.currentPage - 1)} disabled={entityPagination.currentPage === 1}><ChevronLeft size={17} /></button>
-                  <span aria-live="polite">Page {entityPagination.currentPage} of {entityPagination.pageCount}</span>
+                  <span className="entity-page-indicator" role="status" aria-label={`Page ${entityPagination.currentPage} of ${entityPagination.pageCount}`}><strong>{entityPagination.currentPage}</strong><span>/</span>{entityPagination.pageCount}</span>
                   <button className="icon-button entity-page-button" type="button" aria-label="Next entities" onClick={() => setEntityPage(entityPagination.currentPage + 1)} disabled={entityPagination.currentPage === entityPagination.pageCount}><ChevronRight size={17} /></button>
                 </div>
               </nav>
