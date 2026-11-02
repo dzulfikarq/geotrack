@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterCategories, paginateCategories } from "./list";
+import { filterCategories } from "./list";
 import type { Category } from "./types";
 
 const categories: Category[] = [
@@ -11,10 +11,5 @@ describe("category table helpers", () => {
   it("combines search and category filters", () => {
     expect(filterCategories(categories, { search: "truck", source: "built-in", markerStyle: "pin", color: "orange" }).map(({ id }) => id)).toEqual(["1"]);
     expect(filterCategories(categories, { search: "storage", source: "all", markerStyle: "", color: "" }).map(({ id }) => id)).toEqual(["2"]);
-  });
-
-  it("slices pages and clamps page after result count changes", () => {
-    const page = paginateCategories(Array.from({ length: 12 }, (_, index) => index), 8, 5);
-    expect(page).toMatchObject({ items: [10, 11], currentPage: 3, pageCount: 3, firstItem: 11, lastItem: 12 });
   });
 });

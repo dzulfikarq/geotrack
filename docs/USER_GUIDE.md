@@ -11,6 +11,7 @@ Ikuti bagian [Mulai cepat di README](../README.md#mulai-cepat). Database baru su
 - Panel **Entities** menampilkan kode, nama, kategori, dan status untuk data dari API.
 - Ketik kode atau nama di kolom pencarian. Pilih kategori dan/atau status; filter dapat digabung.
 - Gunakan **Clear filters** untuk kembali menampilkan semua data.
+- Daftar menampilkan 5 entitas per halaman; gunakan tombol pagination untuk melihat halaman lain. Filter dan search kembali ke halaman pertama.
 - Marker dan daftar memakai hasil filter yang sama. Icon, warna, dan bentuk marker berasal dari metadata kategori; inactive tampil lebih redup dan maintenance memakai garis marker putus-putus.
 - Klik baris atau marker untuk memilih entitas. Panel detail menampilkan kode, nama, kategori, status, koordinat, deskripsi, waktu dibuat, dan waktu terakhir diperbarui. UUID internal tersedia di API, tetapi tidak ditampilkan di panel.
 

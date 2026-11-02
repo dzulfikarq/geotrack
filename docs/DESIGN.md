@@ -11,7 +11,7 @@ Audit mencakup `frontend/src/styles.css`, `frontend/src/tailwind.config.js`, `fr
 - **Workspace geografis, bukan live tracking.** List dan peta menampilkan lokasi entity tersimpan; panel footer menyatakan data bukan pelacakan langsung.
 - **List dan map saling terhubung.** Filter list diterapkan pada marker; memilih baris atau marker memusatkan peta dan membuka detail.
 - **Hierarki tenang, aksen hangat.** Canvas sage pucat, permukaan putih, teks hijau gelap, garis tipis, dan oranye untuk aksi/selection. Warna kategori membedakan jenis entity.
-- **Informasi padat, tetap responsif.** Desktop memakai list dan map berdampingan; layar kecil beralih antara tampilan Entities dan Map.
+- **Informasi padat, tetap responsif.** Desktop memakai list paginated (5 entity per halaman) dan map berdampingan; layar kecil beralih antara tampilan Entities dan Map.
 
 Ini prinsip yang disimpulkan dari implementasi, bukan aturan formal yang diterapkan melalui token atau komponen terpusat.
 

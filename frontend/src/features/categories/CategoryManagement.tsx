@@ -8,7 +8,8 @@ import { ApiError } from "../entities/api";
 import { createCategory, deleteCategory, listCategories, updateCategory } from "./api";
 import { categorySchema } from "./schema";
 import type { Category, CategoryInput } from "./types";
-import { filterCategories, paginateCategories, type CategorySource } from "./list";
+import { filterCategories, type CategorySource } from "./list";
+import { paginateItems } from "../../utils/pagination";
 import type { ColorKey, MarkerStyle } from "./icons";
 import {
   CategoryGlyph,
@@ -46,7 +47,7 @@ export default function CategoryManagement({ onCategoryDeleted, onViewOnMap }: {
     markerStyle,
     color,
   }), [items, search, source, markerStyle, color]);
-  const pagination = paginateCategories(filtered, page, pageSize);
+  const pagination = paginateItems(filtered, page, pageSize);
   const hasFilters = !!search || source !== "all" || !!markerStyle || !!color;
 
   function clearFilters() {

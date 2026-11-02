@@ -4,6 +4,7 @@ import {
   Activity,
   CalendarDays,
   Check,
+  ChevronLeft,
   ChevronRight,
   CircleAlert,
   ClipboardCopy,
@@ -27,8 +28,10 @@ import EntityMap from "./features/map/EntityMap";
 import CategoryManagement from "./features/categories/CategoryManagement";
 import { CategoryGlyph, getColor } from "./features/categories/icons";
 import { listCategories } from "./features/categories/api";
+import { paginateItems } from "./utils/pagination";
 
 const emptyFilters: EntityFilters = { q: "", categoryId: "", status: "" };
+const ENTITY_PAGE_SIZE = 5;
 type ToastMessage = { kind: "success" | "error"; message: string };
 
 export default function App() {
@@ -44,12 +47,14 @@ export default function App() {
   const [pickedLocation, setPickedLocation] = useState<PickedLocation | null>(null);
   const [pickSequence, setPickSequence] = useState(0);
   const [mobileView, setMobileView] = useState<"list" | "map">("map");
+  const [entityPage, setEntityPage] = useState(1);
   const [toast, setToast] = useState<ToastMessage | null>(null);
 
   const entitiesQuery = useQuery({ queryKey: ["entities", filters], queryFn: () => listEntities(filters) });
   const categoriesQuery = useQuery({ queryKey: ["categories"], queryFn: listCategories });
   const categories = categoriesQuery.data ?? [];
   const entities = entitiesQuery.data ?? [];
+  const entityPagination = paginateItems(entities, entityPage, ENTITY_PAGE_SIZE);
   const selected = entities.find((entity) => entity.id === selectedId) ?? null;
   const editing = entities.find((entity) => entity.id === editId) ?? null;
 
@@ -66,6 +71,7 @@ export default function App() {
       await queryClient.invalidateQueries({ queryKey: ["entities"] });
       setSelectedId(entity.id);
       setFilters(emptyFilters);
+      setEntityPage(1);
       setMobileView("map");
       closeForm();
       setToast({ kind: "success", message: editId ? "Entity changes saved." : "Entity created." });
@@ -78,6 +84,7 @@ export default function App() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["entities"] });
       setSelectedId(null);
+      setEntityPage(1);
       setDeleteOpen(false);
       setToast({ kind: "success", message: "Entity deleted." });
     },
@@ -122,7 +129,14 @@ export default function App() {
 
   function selectEntity(entity: Entity) {
     setSelectedId(entity.id);
+    const index = entities.findIndex((item) => item.id === entity.id);
+    if (index >= 0) setEntityPage(Math.floor(index / ENTITY_PAGE_SIZE) + 1);
     setMobileView("map");
+  }
+
+  function clearEntityFilters() {
+    setFilters(emptyFilters);
+    setEntityPage(1);
   }
 
   async function copyCoordinates(entity: Entity) {
@@ -205,20 +219,20 @@ export default function App() {
             <div className="filter-controls">
               <label className="search-field">
                 <Search size={17} aria-hidden="true" />
-                <input value={filters.q} onChange={(event) => setFilters({ ...filters, q: event.target.value })} placeholder="Search name or identifier" aria-label="Search by code or name" />
-                {filters.q && <button type="button" className="search-clear" onClick={() => setFilters({ ...filters, q: "" })} aria-label="Clear search"><X size={15} /></button>}
+                <input value={filters.q} onChange={(event) => { setFilters({ ...filters, q: event.target.value }); setEntityPage(1); }} placeholder="Search name or identifier" aria-label="Search by code or name" />
+                {filters.q && <button type="button" className="search-clear" onClick={() => { setFilters({ ...filters, q: "" }); setEntityPage(1); }} aria-label="Clear search"><X size={15} /></button>}
               </label>
               <div className="filter-selects">
                 <label className="select-wrap">
                   <span className="sr-only">Filter by category</span>
-                  <select value={filters.categoryId} onChange={(event) => setFilters({ ...filters, categoryId: event.target.value })}>
+                  <select value={filters.categoryId} onChange={(event) => { setFilters({ ...filters, categoryId: event.target.value }); setEntityPage(1); }}>
                     <option value="">All categories</option>
                     {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
                   </select>
                 </label>
                 <label className="select-wrap">
                   <span className="sr-only">Filter by status</span>
-                  <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value as EntityFilters["status"] })}>
+                  <select value={filters.status} onChange={(event) => { setFilters({ ...filters, status: event.target.value as EntityFilters["status"] }); setEntityPage(1); }}>
                     <option value="">All statuses</option>
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -227,7 +241,7 @@ export default function App() {
                 </label>
               </div>
               {(filters.q || filters.categoryId || filters.status) && (
-                <button className="clear-filters" type="button" onClick={() => setFilters(emptyFilters)}>Clear all filters</button>
+                <button className="clear-filters" type="button" onClick={clearEntityFilters}>Clear all filters</button>
               )}
             </div>
 
@@ -249,12 +263,22 @@ export default function App() {
                   <strong>{filters.q || filters.categoryId || filters.status ? "No matching entities" : "Your map is ready"}</strong>
                   <p>{filters.q || filters.categoryId || filters.status ? "Try another search or clear filters to see more locations." : "Add your first entity and its saved location will appear here."}</p>
                   {!filters.q && !filters.categoryId && !filters.status && <button className="button button-primary" type="button" onClick={openCreate} disabled={!categories.length}><Plus size={16} /> Add an entity</button>}
-                  {(filters.q || filters.categoryId || filters.status) && <button className="text-button" type="button" onClick={() => setFilters(emptyFilters)}>Clear filters</button>}
+                  {(filters.q || filters.categoryId || filters.status) && <button className="text-button" type="button" onClick={clearEntityFilters}>Clear filters</button>}
                 </div>
               ) : (
-                entities.map((entity) => <EntityRow key={entity.id} entity={entity} selected={selectedId === entity.id} onClick={() => selectEntity(entity)} />)
+                entityPagination.items.map((entity) => <EntityRow key={entity.id} entity={entity} selected={selectedId === entity.id} onClick={() => selectEntity(entity)} />)
               )}
             </div>
+            {!entitiesQuery.isLoading && !entitiesQuery.isError && entities.length > 0 && (
+              <nav className="entity-pagination" aria-label="Entity list pagination">
+                <span>Showing {entityPagination.firstItem}–{entityPagination.lastItem} of {entities.length}</span>
+                <div className="entity-pagination-controls">
+                  <button className="icon-button entity-page-button" type="button" aria-label="Previous entities" onClick={() => setEntityPage(entityPagination.currentPage - 1)} disabled={entityPagination.currentPage === 1}><ChevronLeft size={17} /></button>
+                  <span aria-live="polite">Page {entityPagination.currentPage} of {entityPagination.pageCount}</span>
+                  <button className="icon-button entity-page-button" type="button" aria-label="Next entities" onClick={() => setEntityPage(entityPagination.currentPage + 1)} disabled={entityPagination.currentPage === entityPagination.pageCount}><ChevronRight size={17} /></button>
+                </div>
+              </nav>
+            )}
             <div className="panel-footer"><span className="status-indicator online" /> Showing saved locations <span className="footer-dot">·</span> Not live tracking</div>
           </aside>
 
@@ -284,9 +308,13 @@ export default function App() {
 
       <main className="main-shell category-main" hidden={activePage !== "categories"}>
         <CategoryManagement
-          onCategoryDeleted={(id) => setFilters((current) => current.categoryId === id ? { ...current, categoryId: "" } : current)}
+          onCategoryDeleted={(id) => {
+            setFilters((current) => current.categoryId === id ? { ...current, categoryId: "" } : current);
+            setEntityPage(1);
+          }}
           onViewOnMap={(id) => {
             setFilters({ ...emptyFilters, categoryId: id });
+            setEntityPage(1);
             setSelectedId(null);
             setMobileView("map");
             setActivePage("map");
