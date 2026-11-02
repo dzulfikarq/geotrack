@@ -1,0 +1,13 @@
+{
+  "name": "geotrack",
+  "private": true,
+  "scripts": {
+    "predev": "node scripts/check-dev-prereqs.cjs",
+    "dev": "concurrently --kill-others --names backend,frontend \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && go run ./cmd/api",
+    "dev:frontend": "npm --prefix frontend run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

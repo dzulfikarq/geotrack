@@ -24,6 +24,7 @@ GeoTrack adalah aplikasi web untuk mengelola entitas berlokasi geografis—kenda
 | Backend | Go, Gin |
 | Database | SQLite melalui `database/sql` dan `modernc.org/sqlite` (tanpa CGO) |
 | Pengujian frontend | Vitest |
+| Orkestrasi development | `concurrently` dari root repository |
 
 Antarmuka menggunakan elemen HTML native untuk dialog; shadcn/ui tidak dipakai.
 
@@ -31,72 +32,48 @@ Antarmuka menggunakan elemen HTML native untuk dialog; shadcn/ui tidak dipakai.
 
 - Go 1.23 atau lebih baru.
 - Node.js 20 atau lebih baru dan npm.
+- Dependensi npm root dan frontend (dipasang pada langkah setup di bawah).
 - Akses internet untuk memuat tile OpenStreetMap.
 
 Docker, API key peta, dan server database terpisah tidak diperlukan.
 
 ## Mulai cepat
 
-> Jalankan backend dan frontend di dua terminal terpisah dari direktori repository.
+Perintah berikut dijalankan dari root repository. `npm run dev` memulai backend dan frontend bersamaan; `Ctrl+C` menghentikan keduanya.
 
 ### Windows — PowerShell
 
-Terminal 1, backend:
-
 ```powershell
-cd backend
-go mod download
-$env:PORT = "8080"
-$env:DB_PATH = "./data/geotrack.db"
-$env:CORS_ORIGIN = "http://localhost:5173"
-go run ./cmd/api
-```
-
-Terminal 2, frontend:
-
-```powershell
-cd frontend
 npm install
-# Opsional: salin lalu edit VITE_API_BASE_URL bila API bukan URL default.
-Copy-Item .env.example .env
+npm --prefix frontend install
 npm run dev
 ```
 
 ### Linux / macOS
 
-Terminal 1, backend:
-
 ```sh
-cd backend
-go mod download
-export PORT=8080
-export DB_PATH=./data/geotrack.db
-export CORS_ORIGIN=http://localhost:5173
-go run ./cmd/api
-```
-
-Terminal 2, frontend:
-
-```sh
-cd frontend
+cd /path/to/geotrack
 npm install
-# Opsional: salin lalu edit VITE_API_BASE_URL bila API bukan URL default.
-cp .env.example .env
+npm --prefix frontend install
 npm run dev
 ```
 
-Buka `http://localhost:5173`. API tersedia di `http://localhost:8080`; endpoint pemeriksaan proses ada di `http://localhost:8080/health`.
+Backend tersedia di `http://localhost:8080`, frontend di `http://localhost:5173`. `predev` memeriksa Go 1.23+, dependensi `concurrently`, dan dependensi Vite frontend sebelum startup. Jika prasyarat kurang, script menjelaskan langkah perbaikannya. Untuk memulihkan dependensi: jalankan `npm install` di root dan `npm --prefix frontend install`.
+
+Untuk menjalankan satu proses saja, dari root gunakan `npm run dev:backend` atau `npm run dev:frontend`.
+
+Endpoint pemeriksaan backend: `http://localhost:8080/health`.
 
 ## Konfigurasi environment
 
 | Variabel | Default | Komponen | Keterangan |
 |---|---|---|---|
 | `PORT` | `8080` | Backend | Port HTTP API. |
-| `DB_PATH` | `./data/geotrack.db` | Backend dan seed | Path SQLite relatif ke working directory; jalankan command dari `backend/`. |
+| `DB_PATH` | `./data/geotrack.db` | Backend dan seed | Path relatif ke working directory backend. Script root masuk ke `backend/` sebelum menjalankan Go. |
 | `CORS_ORIGIN` | `http://localhost:5173` | Backend | Satu origin frontend yang diizinkan. |
 | `VITE_API_BASE_URL` | `http://localhost:8080` | Frontend | Base URL API sebelum suffix `/api/v1`. |
 
-Backend membaca environment proses. `backend/.env.example` hanya contoh dan **tidak** dimuat otomatis. Vite memuat `.env` dari `frontend/`; file tersebut opsional bila memakai URL default. Detail konfigurasi: [Arsitektur — konfigurasi runtime](docs/ARCHITECTURE.md#konfigurasi-runtime).
+Environment yang diset di shell sebelum `npm run dev` diwariskan ke kedua proses. Contoh PowerShell: `$env:PORT = "8081"`; contoh Linux/macOS: `export PORT=8081`. Jika port API diubah, sesuaikan `VITE_API_BASE_URL` ke port tersebut. Backend membaca environment proses; `backend/.env.example` hanya contoh dan **tidak** dimuat otomatis. Vite memuat `.env` dari `frontend/`; file tersebut opsional bila memakai URL default. Detail konfigurasi: [Arsitektur — konfigurasi runtime](docs/ARCHITECTURE.md#konfigurasi-runtime).
 
 ## Data contoh pengembangan
 
