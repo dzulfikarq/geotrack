@@ -43,11 +43,13 @@ Klik peta biasa tidak mengubah form jika mode picker tidak aktif. Picker mengamb
 
 ## 6. Kelola kategori
 
-1. Pilih **Categories** pada sidebar. Halaman menampilkan icon, nama, deskripsi, jumlah entity, dan preview bentuk marker.
+1. Pilih **Categories** pada sidebar. Halaman menampilkan tabel kategori dengan icon, nama, deskripsi, jumlah entity, preview marker, dan jenis kategori.
 2. Pilih **Add category** untuk kategori baru atau **Edit** untuk mengubah nama/deskripsi/visual kategori. Nama wajib dan unik.
 3. Pilih icon dari katalog Lucide yang dikelompokkan Vehicle, IoT, Facility, dan General. Pilih satu dari delapan warna preset serta bentuk **Pin**, **Circle**, atau **Rounded square**. Preview marker mengikuti pilihan secara langsung.
 4. Pilih **Save changes** atau **Create category**. Category dropdown, filter, baris entity, peta, dan legend memakai data kategori terbaru dari API.
 5. Kategori bawaan Vehicle, IoT Device, dan Facility tidak dapat dihapus. Kategori custom hanya dapat dihapus ketika tidak dipakai entity; dialog memberi tahu jika entity masih terhubung.
+
+Cari kategori lewat kolom search; filter berdasarkan jenis, bentuk marker, atau warna. Gunakan pagination untuk berpindah halaman dan mengubah jumlah row. Pilih **View on map** pada row kategori untuk kembali ke map explorer dengan filter kategori tersebut aktif.
 
 Ikon disimpan sebagai key katalog, bukan SVG/HTML. Mengubah metadata visual kategori akan memperbarui marker entity yang terhubung.
 

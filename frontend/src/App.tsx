@@ -283,7 +283,15 @@ export default function App() {
       </main>
 
       <main className="main-shell category-main" hidden={activePage !== "categories"}>
-        <CategoryManagement onCategoryDeleted={(id) => setFilters((current) => current.categoryId === id ? { ...current, categoryId: "" } : current)} />
+        <CategoryManagement
+          onCategoryDeleted={(id) => setFilters((current) => current.categoryId === id ? { ...current, categoryId: "" } : current)}
+          onViewOnMap={(id) => {
+            setFilters({ ...emptyFilters, categoryId: id });
+            setSelectedId(null);
+            setMobileView("map");
+            setActivePage("map");
+          }}
+        />
       </main>
 
       {toast && (

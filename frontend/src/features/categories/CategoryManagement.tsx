@@ -2,12 +2,14 @@ import { useMemo, useState, type CSSProperties } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { AlertCircle, LoaderCircle, Plus, Search, Trash2, X } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, LoaderCircle, MapPin, Plus, Search, Trash2, X } from "lucide-react";
 import Modal from "../../components/Modal";
 import { ApiError } from "../entities/api";
 import { createCategory, deleteCategory, listCategories, updateCategory } from "./api";
 import { categorySchema } from "./schema";
 import type { Category, CategoryInput } from "./types";
+import { filterCategories, paginateCategories, type CategorySource } from "./list";
+import type { ColorKey, MarkerStyle } from "./icons";
 import {
   CategoryGlyph,
   CategoryMarker,
@@ -20,20 +22,40 @@ import {
 
 const blankCategory: CategoryInput = { name: "", description: "", icon_key: "map-pin", color: "orange", marker_style: "pin" };
 
-export default function CategoryManagement({ onCategoryDeleted }: { onCategoryDeleted: (id: string) => void }) {
+export default function CategoryManagement({ onCategoryDeleted, onViewOnMap }: {
+  onCategoryDeleted: (id: string) => void;
+  onViewOnMap: (id: string) => void;
+}) {
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ["categories"], queryFn: listCategories });
   const [search, setSearch] = useState("");
+  const [source, setSource] = useState<CategorySource>("all");
+  const [markerStyle, setMarkerStyle] = useState<MarkerStyle | "">("");
+  const [color, setColor] = useState<ColorKey | "">("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [editing, setEditing] = useState<Category | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [deleting, setDeleting] = useState<Category | null>(null);
   const [notice, setNotice] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const items = query.data ?? [];
-  const filtered = useMemo(() => {
-    const needle = search.trim().toLocaleLowerCase();
-    return needle ? items.filter((item) => `${item.name} ${item.description}`.toLocaleLowerCase().includes(needle)) : items;
-  }, [items, search]);
+  const filtered = useMemo(() => filterCategories(items, {
+    search,
+    source,
+    markerStyle,
+    color,
+  }), [items, search, source, markerStyle, color]);
+  const pagination = paginateCategories(filtered, page, pageSize);
+  const hasFilters = !!search || source !== "all" || !!markerStyle || !!color;
+
+  function clearFilters() {
+    setSearch("");
+    setSource("all");
+    setMarkerStyle("");
+    setColor("");
+    setPage(1);
+  }
 
   const saveMutation = useMutation({
     mutationFn: ({ id, input }: { id: string | null; input: CategoryInput }) =>
@@ -45,6 +67,7 @@ export default function CategoryManagement({ onCategoryDeleted }: { onCategoryDe
       ]);
       setFormOpen(false);
       setEditing(null);
+      setPage(1);
       setNotice(variables.id ? "Category changes saved." : "Category created.");
     },
   });
@@ -53,6 +76,7 @@ export default function CategoryManagement({ onCategoryDeleted }: { onCategoryDe
     mutationFn: deleteCategory,
     onSuccess: async (_, id) => {
       onCategoryDeleted(id);
+      setPage(1);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["categories"] }),
         queryClient.invalidateQueries({ queryKey: ["entities"] }),
@@ -96,14 +120,35 @@ export default function CategoryManagement({ onCategoryDeleted }: { onCategoryDe
         <div className="category-toolbar">
           <label className="search-field">
             <Search size={17} aria-hidden="true" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search categories" aria-label="Search categories" />
-            {search && <button type="button" className="search-clear" onClick={() => setSearch("")} aria-label="Clear search"><X size={15} /></button>}
+            <input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Search categories" aria-label="Search categories" />
+            {search && <button type="button" className="search-clear" onClick={() => { setSearch(""); setPage(1); }} aria-label="Clear search"><X size={15} /></button>}
           </label>
-          <span className="category-count">{filtered.length} shown</span>
+          <div className="category-filters">
+            <label className="select-wrap">
+              <span className="sr-only">Filter by category type</span>
+              <select value={source} onChange={(event) => { setSource(event.target.value as CategorySource); setPage(1); }}>
+                <option value="all">All types</option><option value="built-in">Built-in</option><option value="custom">Custom</option>
+              </select>
+            </label>
+            <label className="select-wrap">
+              <span className="sr-only">Filter by marker shape</span>
+              <select value={markerStyle} onChange={(event) => { setMarkerStyle(event.target.value as MarkerStyle | ""); setPage(1); }}>
+                <option value="">All marker shapes</option>{MARKER_STYLES.map((style) => <option key={style} value={style}>{formatMarkerStyle(style)}</option>)}
+              </select>
+            </label>
+            <label className="select-wrap">
+              <span className="sr-only">Filter by color</span>
+              <select value={color} onChange={(event) => { setColor(event.target.value as ColorKey | ""); setPage(1); }}>
+                <option value="">All colors</option>{COLOR_PALETTE.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
+              </select>
+            </label>
+          </div>
+          {hasFilters && <button className="clear-filters" type="button" onClick={clearFilters}>Clear filters</button>}
+          <span className="category-count">{filtered.length} of {items.length}</span>
         </div>
 
         {query.isLoading ? (
-          <div className="category-grid" aria-label="Loading categories" aria-busy="true">
+          <div className="category-table-loading" aria-label="Loading categories" aria-busy="true">
             {Array.from({ length: 3 }, (_, index) => <div className="category-skeleton" key={index}><i /><span /><span /></div>)}
           </div>
         ) : query.isError ? (
@@ -115,13 +160,35 @@ export default function CategoryManagement({ onCategoryDeleted }: { onCategoryDe
           <div className="category-state">
             <span className="category-empty-icon"><Search size={22} /></span>
             <strong>{items.length ? "No matching categories" : "No categories yet"}</strong>
-            <p>{items.length ? "Try another search." : "Create a category to use it on entities and map markers."}</p>
+            <p>{items.length ? "Try another search or clear filters." : "Create a category to use it on entities and map markers."}</p>
+            {items.length > 0 && hasFilters && <button className="button button-secondary" type="button" onClick={clearFilters}>Clear filters</button>}
             {!items.length && <button className="button button-primary" type="button" onClick={openCreate}><Plus size={16} /> Add category</button>}
           </div>
         ) : (
-          <div className="category-grid">
-            {filtered.map((item) => <CategoryCard key={item.id} item={item} onEdit={() => openEdit(item)} onDelete={() => { setDeleteError(""); setDeleting(item); }} />)}
-          </div>
+          <>
+            <div className="category-table-scroll">
+              <table className="category-table">
+                <caption className="sr-only">Category list</caption>
+                <thead><tr><th scope="col">Category</th><th scope="col">Entities</th><th scope="col">Marker</th><th scope="col">Type</th><th scope="col">Actions</th></tr></thead>
+                <tbody>
+                  {pagination.items.map((item) => <CategoryRow key={item.id} item={item} onEdit={() => openEdit(item)} onDelete={() => { setDeleteError(""); setDeleting(item); }} onViewOnMap={() => onViewOnMap(item.id)} />)}
+                </tbody>
+              </table>
+            </div>
+            <footer className="category-pagination">
+              <span>Showing {pagination.firstItem}–{pagination.lastItem} of {filtered.length}</span>
+              <div className="category-pagination-controls">
+                <label className="category-page-size">Rows per page
+                  <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }} aria-label="Rows per page">
+                    <option value={10}>10</option><option value={25}>25</option><option value={50}>50</option>
+                  </select>
+                </label>
+                <button className="icon-button category-page-button" type="button" aria-label="Previous page" onClick={() => setPage(pagination.currentPage - 1)} disabled={pagination.currentPage === 1}><ChevronLeft size={18} /></button>
+                <span>Page {pagination.currentPage} of {pagination.pageCount}</span>
+                <button className="icon-button category-page-button" type="button" aria-label="Next page" onClick={() => setPage(pagination.currentPage + 1)} disabled={pagination.currentPage === pagination.pageCount}><ChevronRight size={18} /></button>
+              </div>
+            </footer>
+          </>
         )}
       </section>
 
@@ -154,26 +221,23 @@ export default function CategoryManagement({ onCategoryDeleted }: { onCategoryDe
   );
 }
 
-function CategoryCard({ item, onEdit, onDelete }: { item: Category; onEdit: () => void; onDelete: () => void }) {
+function CategoryRow({ item, onEdit, onDelete, onViewOnMap }: { item: Category; onEdit: () => void; onDelete: () => void; onViewOnMap: () => void }) {
   const color = getColor(item.color);
   return (
-    <article className="category-card">
-      <div className="category-card-heading">
-        <span className="category-card-icon" style={{ "--category-color": color.hex, "--category-soft": color.soft } as CSSProperties}>
-          <CategoryGlyph iconKey={item.icon_key} size={20} />
-        </span>
-        <div className="category-card-title"><h2>{item.name}</h2>{item.is_builtin && <span className="built-in-badge">Built in</span>}</div>
-        <div className="category-actions">
-          <button className="category-action-button" type="button" onClick={onEdit}>Edit</button>
-          <button className="icon-button category-delete" type="button" onClick={onDelete} aria-label={`Delete ${item.name}`} title={item.is_builtin ? "Built-in categories are kept" : item.entity_count ? "Category is in use" : "Delete category"} disabled={item.is_builtin || item.entity_count > 0}><Trash2 size={16} /></button>
-        </div>
-      </div>
-      <p className="category-description">{item.description || "No description"}</p>
-      <div className="category-card-bottom">
-        <span>{item.entity_count} {item.entity_count === 1 ? "entity" : "entities"}</span>
-        <span className="category-marker-sample"><CategoryMarker iconKey={item.icon_key} color={item.color} markerStyle={item.marker_style} size={14} />{formatMarkerStyle(item.marker_style)}</span>
-      </div>
-    </article>
+    <tr>
+      <td><div className="category-table-name">
+        <span className="category-row-icon" style={{ "--category-color": color.hex, "--category-soft": color.soft } as CSSProperties}><CategoryGlyph iconKey={item.icon_key} size={20} /></span>
+        <span><strong>{item.name}</strong><small>{item.description || "No description"}</small></span>
+      </div></td>
+      <td>{item.entity_count}</td>
+      <td><span className="category-marker-sample"><CategoryMarker iconKey={item.icon_key} color={item.color} markerStyle={item.marker_style} size={14} />{formatMarkerStyle(item.marker_style)}</span></td>
+      <td><span className={`category-type-badge${item.is_builtin ? " is-built-in" : ""}`}>{item.is_builtin ? "Built-in" : "Custom"}</span></td>
+      <td><div className="category-actions">
+        <button className="category-map-link" type="button" onClick={onViewOnMap}><MapPin size={15} />View on map</button>
+        <button className="category-action-button" type="button" onClick={onEdit}>Edit</button>
+        <button className="icon-button category-delete" type="button" onClick={onDelete} aria-label={`Delete ${item.name}`} title={item.is_builtin ? "Built-in categories are kept" : item.entity_count ? "Category is in use" : "Delete category"} disabled={item.is_builtin || item.entity_count > 0}><Trash2 size={16} /></button>
+      </div></td>
+    </tr>
   );
 }
 
