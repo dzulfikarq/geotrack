@@ -3,9 +3,16 @@
 !.env.example
 node_modules/
 frontend/dist/
+frontend/coverage/
 backend/data/
 *.db
 *.db-shm
 *.db-wal
+*.sqlite
+*.sqlite3
+*-shm
+*-wal
 *.log
 *.exe
+*.tmp
+*.temp
