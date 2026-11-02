@@ -89,8 +89,7 @@ export function getMarkerStyle(style: string): MarkerStyle {
 }
 
 export function CategoryGlyph({ iconKey, size = 18 }: { iconKey: string; size?: number }) {
-  const Icon = getIcon(iconKey);
-  return <Icon size={size} strokeWidth={1.9} aria-hidden="true" />;
+  return createElement(getIcon(iconKey), { size, strokeWidth: 1.9, "aria-hidden": true });
 }
 
 export function CategoryMarker({
@@ -110,10 +109,9 @@ export function CategoryMarker({
 }) {
   const colorOption = getColor(color);
   const style: CSSProperties & { "--marker-color": string } = { "--marker-color": colorOption.hex };
-  const Icon = getIcon(iconKey);
   return (
     <span className={`category-marker marker-${getMarkerStyle(markerStyle)}${selected ? " is-selected" : ""}${status === "inactive" ? " is-inactive" : ""}${status === "maintenance" ? " is-maintenance" : ""}`} style={style} aria-hidden="true">
-      <Icon size={size} strokeWidth={1.9} />
+      {createElement(getIcon(iconKey), { size, strokeWidth: 1.9 })}
     </span>
   );
 }

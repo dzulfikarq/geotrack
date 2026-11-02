@@ -1,7 +1,7 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { AlertCircle, ChevronLeft, ChevronRight, LoaderCircle, MapPin, Plus, Search, Trash2, X } from "lucide-react";
 import Modal from "../../components/Modal";
 import { ApiError } from "../entities/api";
@@ -41,12 +41,12 @@ export default function CategoryManagement({ onCategoryDeleted, onViewOnMap }: {
   const [notice, setNotice] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const items = query.data ?? [];
-  const filtered = useMemo(() => filterCategories(items, {
+  const filtered = useMemo(() => filterCategories(query.data ?? [], {
     search,
     source,
     markerStyle,
     color,
-  }), [items, search, source, markerStyle, color]);
+  }), [query.data, search, source, markerStyle, color]);
   const pagination = paginateItems(filtered, page, pageSize);
   const hasFilters = !!search || source !== "all" || !!markerStyle || !!color;
 
@@ -193,7 +193,7 @@ export default function CategoryManagement({ onCategoryDeleted, onViewOnMap }: {
         )}
       </section>
 
-      <Modal open={formOpen} title={editing ? "Edit category" : "Create category"} onClose={() => setFormOpen(false)} wide>
+      <Modal open={formOpen} title={editing ? "Edit category" : "Create category"} onClose={() => !saveMutation.isPending && setFormOpen(false)} wide>
         <CategoryForm
           key={editing?.id ?? "new"}
           initial={editing ? toInput(editing) : blankCategory}
@@ -248,11 +248,14 @@ function CategoryForm({ initial, pending, onSave, onCancel }: {
   onSave: (input: CategoryInput) => Promise<unknown>;
   onCancel: () => void;
 }) {
-  const { register, handleSubmit, watch, setError, setValue, clearErrors, formState: { errors } } = useForm<CategoryInput>({
+  const { control, register, handleSubmit, setError, setValue, clearErrors, formState: { errors } } = useForm<CategoryInput>({
     resolver: zodResolver(categorySchema),
     defaultValues: initial,
   });
-  const input = watch();
+  const input = useWatch({ control, defaultValue: initial });
+  const iconKey = input?.icon_key ?? initial.icon_key;
+  const markerColor = input?.color ?? initial.color;
+  const markerStyle = input?.marker_style ?? initial.marker_style;
   const [serverError, setServerError] = useState("");
 
   const submit = handleSubmit(async (value) => {
@@ -290,7 +293,7 @@ function CategoryForm({ initial, pending, onSave, onCancel }: {
                 <h3>{group}</h3>
                 <div className="icon-grid">
                   {ICON_CATALOG.filter((entry) => entry.group === group).map(({ key, label, Icon }) => (
-                    <button className={`icon-choice ${input.icon_key === key ? "selected" : ""}`} type="button" key={key} aria-pressed={input.icon_key === key} aria-label={label} title={label} onClick={() => setValue("icon_key", key, { shouldDirty: true, shouldValidate: true })}>
+                    <button className={`icon-choice ${iconKey === key ? "selected" : ""}`} type="button" key={key} aria-pressed={iconKey === key} aria-label={label} title={label} onClick={() => setValue("icon_key", key, { shouldDirty: true, shouldValidate: true })}>
                       <Icon size={19} strokeWidth={1.8} /><span>{label}</span>
                     </button>
                   ))}
@@ -307,7 +310,7 @@ function CategoryForm({ initial, pending, onSave, onCancel }: {
             <legend>Marker color <b>*</b></legend>
             <div className="color-grid">
               {COLOR_PALETTE.map((color) => (
-                <button type="button" key={color.key} className={`color-choice ${input.color === color.key ? "selected" : ""}`} aria-pressed={input.color === color.key} onClick={() => setValue("color", color.key, { shouldDirty: true, shouldValidate: true })}>
+                <button type="button" key={color.key} className={`color-choice ${markerColor === color.key ? "selected" : ""}`} aria-pressed={markerColor === color.key} onClick={() => setValue("color", color.key, { shouldDirty: true, shouldValidate: true })}>
                   <i style={{ background: color.hex }} />{color.label}
                 </button>
               ))}
@@ -318,8 +321,8 @@ function CategoryForm({ initial, pending, onSave, onCancel }: {
             <legend>Marker shape <b>*</b></legend>
             <div className="marker-style-grid">
               {MARKER_STYLES.map((style) => (
-                <button type="button" key={style} className={`marker-style-choice ${input.marker_style === style ? "selected" : ""}`} aria-pressed={input.marker_style === style} onClick={() => setValue("marker_style", style, { shouldDirty: true, shouldValidate: true })}>
-                  <CategoryMarker iconKey={input.icon_key} color={input.color} markerStyle={style} size={16} />{formatMarkerStyle(style)}
+                <button type="button" key={style} className={`marker-style-choice ${markerStyle === style ? "selected" : ""}`} aria-pressed={markerStyle === style} onClick={() => setValue("marker_style", style, { shouldDirty: true, shouldValidate: true })}>
+                  <CategoryMarker iconKey={iconKey} color={markerColor} markerStyle={style} size={16} />{formatMarkerStyle(style)}
                 </button>
               ))}
             </div>
@@ -327,7 +330,7 @@ function CategoryForm({ initial, pending, onSave, onCancel }: {
           </fieldset>
         </div>
         <div className="marker-preview" aria-label="Live marker preview">
-          <CategoryMarker iconKey={input.icon_key} color={input.color} markerStyle={input.marker_style} size={20} />
+          <CategoryMarker iconKey={iconKey} color={markerColor} markerStyle={markerStyle} size={20} />
           <span>Map marker preview</span>
         </div>
       </fieldset>

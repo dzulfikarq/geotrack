@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { lazy, Suspense, useEffect, useState, type CSSProperties } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
@@ -25,11 +25,11 @@ import EntityForm, { type PickedLocation } from "./features/entities/EntityForm"
 import { createEntity, deleteEntity, listEntities, updateEntity } from "./features/entities/api";
 import type { Entity, EntityFilters, EntityInput, EntityStatus } from "./features/entities/types";
 import EntityMap from "./features/map/EntityMap";
-import CategoryManagement from "./features/categories/CategoryManagement";
 import { CategoryGlyph, getColor } from "./features/categories/icons";
 import { listCategories } from "./features/categories/api";
 import { paginateItems } from "./utils/pagination";
 
+const CategoryManagement = lazy(() => import("./features/categories/CategoryManagement"));
 const emptyFilters: EntityFilters = { q: "", categoryId: "", status: "" };
 const ENTITY_PAGE_SIZE = 10;
 type ToastMessage = { kind: "success" | "error"; message: string };
@@ -37,6 +37,7 @@ type ToastMessage = { kind: "success" | "error"; message: string };
 export default function App() {
   const queryClient = useQueryClient();
   const [activePage, setActivePage] = useState<"map" | "categories">("map");
+  const [categoryVisited, setCategoryVisited] = useState(false);
   const [filters, setFilters] = useState<EntityFilters>(emptyFilters);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -68,7 +69,10 @@ export default function App() {
     mutationFn: ({ id, input }: { id: string | null; input: EntityInput }) =>
       id ? updateEntity(id, input) : createEntity(input),
     onSuccess: async (entity) => {
-      await queryClient.invalidateQueries({ queryKey: ["entities"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["entities"] }),
+        queryClient.invalidateQueries({ queryKey: ["categories"] }),
+      ]);
       setSelectedId(entity.id);
       setFilters(emptyFilters);
       setEntityPage(1);
@@ -82,7 +86,10 @@ export default function App() {
   const deleteMutation = useMutation({
     mutationFn: deleteEntity,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["entities"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["entities"] }),
+        queryClient.invalidateQueries({ queryKey: ["categories"] }),
+      ]);
       setSelectedId(null);
       setEntityPage(1);
       setDeleteOpen(false);
@@ -115,7 +122,10 @@ export default function App() {
   }
 
   function navigate(page: "map" | "categories") {
-    if (page === "categories") closeForm();
+    if (page === "categories") {
+      closeForm();
+      setCategoryVisited(true);
+    }
     setActivePage(page);
   }
 
@@ -152,7 +162,15 @@ export default function App() {
     return saveMutation.mutateAsync({ id: editId, input }).then(() => undefined);
   }
 
-  const apiState = entitiesQuery.isLoading ? "checking" : entitiesQuery.isError ? "offline" : "online";
+  const canAddEntity = categories.length > 0 && !categoriesQuery.isLoading;
+  const entityCreateReason = categoriesQuery.isLoading
+    ? "Loading categories; entity creation will be available shortly."
+    : categoriesQuery.isError
+      ? "Categories could not be loaded. Retry before adding an entity."
+      : "No categories available. Open Categories to create one.";
+  const workspaceDataLoading = entitiesQuery.isLoading || categoriesQuery.isLoading;
+  const workspaceDataError = entitiesQuery.isError || categoriesQuery.isError;
+  const apiState = workspaceDataLoading ? "checking" : workspaceDataError ? "offline" : "online";
 
   return (
     <div className="app-shell">
@@ -173,7 +191,7 @@ export default function App() {
         <div className="sidebar-bottom">
           <div className="sidebar-status">
             <span className={`status-indicator ${apiState}`} />
-            <span>{apiState === "checking" ? "Connecting to API" : apiState === "offline" ? "API unavailable" : "API connected"}</span>
+            <span>{apiState === "checking" ? "Loading workspace data" : apiState === "offline" ? "Workspace data unavailable" : "API connected"}</span>
           </div>
           <span className="sidebar-version">GEOTRACK · LOCAL WORKSPACE</span>
         </div>
@@ -191,11 +209,31 @@ export default function App() {
               <span className="entity-total-icon"><Database size={16} /></span>
               <span><strong>{entitiesQuery.isLoading ? "—" : entities.length}</strong><small>entities in view</small></span>
             </div>
-            <button className="button button-primary add-button" type="button" onClick={openCreate} aria-label="Add entity" disabled={!categories.length}>
+            <button className="button button-primary add-button" type="button" onClick={openCreate} aria-label="Add entity" disabled={!canAddEntity} aria-describedby={!canAddEntity ? "entity-create-status" : undefined}>
               <Plus size={17} /><span>Add entity</span>
             </button>
           </div>
         </header>
+
+        {categoriesQuery.isLoading && (
+          <div className="category-query-state" id="entity-create-status" role="status">
+            <LoaderCircle size={17} className="spin" />
+            <span>{entityCreateReason}</span>
+          </div>
+        )}
+        {categoriesQuery.isError && (
+          <div className="category-query-state category-query-error" id="entity-create-status" role="alert">
+            <CircleAlert size={18} />
+            <span><strong>Couldn’t load categories.</strong> Entity forms need category data. Retry the request.</span>
+            <button className="button button-secondary" type="button" onClick={() => categoriesQuery.refetch()}>Retry categories</button>
+          </div>
+        )}
+        {!categoriesQuery.isLoading && !categoriesQuery.isError && categories.length === 0 && (
+          <div className="category-query-state" id="entity-create-status" role="status">
+            <span>{entityCreateReason}</span>
+            <button className="button button-secondary" type="button" onClick={() => navigate("categories")}>Open Categories</button>
+          </div>
+        )}
 
         <div className="mobile-view-toggle" role="group" aria-label="Workspace view">
           <button type="button" aria-pressed={mobileView === "list"} className={mobileView === "list" ? "active" : ""} onClick={() => setMobileView("list")}>
@@ -213,7 +251,7 @@ export default function App() {
                 <div className="panel-title-row"><h2>Entities</h2><span className="result-count">{entitiesQuery.isLoading ? "—" : entities.length}</span></div>
                 <p>Locations stored in your workspace</p>
               </div>
-              <button className="icon-button quick-add" type="button" onClick={openCreate} aria-label="Add entity" disabled={!categories.length}><Plus size={19} /></button>
+              <button className="icon-button quick-add" type="button" onClick={openCreate} aria-label="Add entity" disabled={!canAddEntity} aria-describedby={!canAddEntity ? "entity-create-status" : undefined}><Plus size={19} /></button>
             </div>
 
             <div className="filter-controls">
@@ -262,7 +300,7 @@ export default function App() {
                   <span className="empty-icon"><MapPinned size={23} /></span>
                   <strong>{filters.q || filters.categoryId || filters.status ? "No matching entities" : "Your map is ready"}</strong>
                   <p>{filters.q || filters.categoryId || filters.status ? "Try another search or clear filters to see more locations." : "Add your first entity and its saved location will appear here."}</p>
-                  {!filters.q && !filters.categoryId && !filters.status && <button className="button button-primary" type="button" onClick={openCreate} disabled={!categories.length}><Plus size={16} /> Add an entity</button>}
+                  {!filters.q && !filters.categoryId && !filters.status && <button className="button button-primary" type="button" onClick={openCreate} disabled={!canAddEntity} aria-describedby={!canAddEntity ? "entity-create-status" : undefined}><Plus size={16} /> Add an entity</button>}
                   {(filters.q || filters.categoryId || filters.status) && <button className="text-button" type="button" onClick={clearEntityFilters}>Clear filters</button>}
                 </div>
               ) : (
@@ -307,19 +345,23 @@ export default function App() {
       </main>
 
       <main className="main-shell category-main" hidden={activePage !== "categories"}>
-        <CategoryManagement
-          onCategoryDeleted={(id) => {
-            setFilters((current) => current.categoryId === id ? { ...current, categoryId: "" } : current);
-            setEntityPage(1);
-          }}
-          onViewOnMap={(id) => {
-            setFilters({ ...emptyFilters, categoryId: id });
-            setEntityPage(1);
-            setSelectedId(null);
-            setMobileView("map");
-            setActivePage("map");
-          }}
-        />
+        {categoryVisited && (
+          <Suspense fallback={<div className="category-page-loading" role="status"><LoaderCircle size={18} className="spin" /> Loading category management…</div>}>
+            <CategoryManagement
+              onCategoryDeleted={(id) => {
+                setFilters((current) => current.categoryId === id ? { ...current, categoryId: "" } : current);
+                setEntityPage(1);
+              }}
+              onViewOnMap={(id) => {
+                setFilters({ ...emptyFilters, categoryId: id });
+                setEntityPage(1);
+                setSelectedId(null);
+                setMobileView("map");
+                setActivePage("map");
+              }}
+            />
+          </Suspense>
+        )}
       </main>
 
       {toast && (
@@ -330,7 +372,7 @@ export default function App() {
         </div>
       )}
 
-      <Modal open={formOpen} title={editId ? "Edit entity" : "Add entity"} onClose={closeForm} wide>
+      <Modal open={formOpen} title={editId ? "Edit entity" : "Add entity"} onClose={() => !saveMutation.isPending && closeForm()} wide>
         <EntityForm
           key={formSession}
           initial={editing ? toInput(editing) : null}
@@ -344,7 +386,7 @@ export default function App() {
         />
       </Modal>
 
-      <Modal open={deleteOpen} title="Delete this entity?" onClose={() => setDeleteOpen(false)}>
+      <Modal open={deleteOpen} title="Delete this entity?" onClose={() => !deleteMutation.isPending && setDeleteOpen(false)}>
         <div className="delete-content">
           <span className="delete-warning-icon"><Trash2 size={20} /></span>
           <p>This permanently removes <strong>{selected?.name ?? "this entity"}</strong> from the workspace and map.</p>
