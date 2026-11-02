@@ -14,6 +14,7 @@ func Validate(input Input) (Input, map[string]string) {
 	input.Code = strings.ToUpper(strings.TrimSpace(input.Code))
 	input.Name = strings.TrimSpace(input.Name)
 	input.Category = strings.TrimSpace(input.Category)
+	input.CategoryID = strings.TrimSpace(input.CategoryID)
 	input.Status = strings.TrimSpace(input.Status)
 	input.Description = strings.TrimSpace(input.Description)
 
@@ -23,8 +24,10 @@ func Validate(input Input) (Input, map[string]string) {
 	if size := utf8.RuneCountInString(input.Name); size < 2 || size > 100 {
 		fields["name"] = "Use 2–100 characters"
 	}
-	if input.Category != "vehicle" && input.Category != "iot_device" && input.Category != "facility" {
-		fields["category"] = "Choose a valid category"
+	if input.CategoryID == "" && input.Category == "" {
+		fields["category_id"] = "Choose a category"
+	} else if input.CategoryID != "" && input.Category != "" {
+		fields["category_id"] = "Provide category_id or legacy category, not both"
 	}
 	if input.Status != "active" && input.Status != "inactive" && input.Status != "maintenance" {
 		fields["status"] = "Choose a valid status"

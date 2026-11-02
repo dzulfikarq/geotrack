@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"geotrack/backend/internal/database"
+	"geotrack/backend/internal/category"
 	"geotrack/backend/internal/entity"
 	"geotrack/backend/internal/httpserver"
 )
@@ -21,7 +22,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              ":" + port,
-		Handler:           httpserver.New(entity.NewRepository(db), env("CORS_ORIGIN", "http://localhost:5173")),
+		Handler:           httpserver.New(entity.NewRepository(db), category.NewRepository(db), env("CORS_ORIGIN", "http://localhost:5173")),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	log.Printf("GeoTrack API listening on http://localhost:%s", port)

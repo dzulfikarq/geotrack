@@ -34,11 +34,25 @@ func (h *Handler) Register(routes *gin.RouterGroup) {
 
 func (h *Handler) list(c *gin.Context) {
 	q := strings.TrimSpace(c.Query("q"))
-	category := c.Query("category")
+	categoryID := strings.TrimSpace(c.Query("category_id"))
+	legacyCategory := strings.TrimSpace(c.Query("category"))
 	status := c.Query("status")
 	fields := make(map[string]string)
-	if category != "" && category != "vehicle" && category != "iot_device" && category != "facility" {
-		fields["category"] = "Choose a valid category"
+	if categoryID != "" && legacyCategory != "" {
+		fields["category_id"] = "Provide category_id or legacy category, not both"
+	} else if categoryID != "" || legacyCategory != "" {
+		exists, err := h.repo.CategoryExists(c.Request.Context(), categoryID, legacyCategory)
+		if err != nil {
+			fail(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Could not validate category filter", nil)
+			return
+		}
+		if !exists {
+			field := "category_id"
+			if legacyCategory != "" {
+				field = "category"
+			}
+			fields[field] = "Choose a valid category"
+		}
 	}
 	if status != "" && status != "active" && status != "inactive" && status != "maintenance" {
 		fields["status"] = "Choose a valid status"
@@ -47,7 +61,7 @@ func (h *Handler) list(c *gin.Context) {
 		fail(c, http.StatusBadRequest, "VALIDATION_ERROR", "Invalid filters", fields)
 		return
 	}
-	items, err := h.repo.List(c.Request.Context(), q, category, status)
+	items, err := h.repo.List(c.Request.Context(), q, categoryID, legacyCategory, status)
 	if err != nil {
 		fail(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Could not load entities", nil)
 		return
@@ -79,6 +93,10 @@ func (h *Handler) create(c *gin.Context) {
 		return
 	}
 	item, err := h.repo.Create(c.Request.Context(), input)
+	if errors.Is(err, ErrCategoryNotFound) {
+		fail(c, http.StatusBadRequest, "VALIDATION_ERROR", "Invalid entity data", map[string]string{"category_id": "Choose a valid category"})
+		return
+	}
 	if IsDuplicateCode(err) {
 		fail(c, http.StatusConflict, "DUPLICATE_CODE", "Code already exists", map[string]string{"code": "This code is already in use"})
 		return
@@ -101,6 +119,10 @@ func (h *Handler) update(c *gin.Context) {
 		return
 	}
 	item, err := h.repo.Update(c.Request.Context(), c.Param("id"), input)
+	if errors.Is(err, ErrCategoryNotFound) {
+		fail(c, http.StatusBadRequest, "VALIDATION_ERROR", "Invalid entity data", map[string]string{"category_id": "Choose a valid category"})
+		return
+	}
 	if IsDuplicateCode(err) {
 		fail(c, http.StatusConflict, "DUPLICATE_CODE", "Code already exists", map[string]string{"code": "This code is already in use"})
 		return

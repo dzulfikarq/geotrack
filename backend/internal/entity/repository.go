@@ -8,46 +8,58 @@ import (
 )
 
 var ErrNotFound = errors.New("entity not found")
+var ErrCategoryNotFound = errors.New("category not found")
 
 type Repository struct{ db *sql.DB }
 
 func NewRepository(db *sql.DB) *Repository { return &Repository{db: db} }
 
 func (r *Repository) Create(ctx context.Context, input Input) (Entity, error) {
+	categoryID, err := r.resolveCategory(ctx, input)
+	if err != nil {
+		return Entity{}, err
+	}
 	id, err := newID()
 	if err != nil {
 		return Entity{}, err
 	}
 	stamp := now()
 	item := Entity{
-		ID: id, Code: input.Code, Name: input.Name, Category: input.Category,
+		ID: id, Code: input.Code, Name: input.Name, CategoryID: categoryID,
 		Status: input.Status, Latitude: *input.Latitude, Longitude: *input.Longitude,
 		Description: input.Description, CreatedAt: stamp, UpdatedAt: stamp,
 	}
 	_, err = r.db.ExecContext(ctx, `INSERT INTO entities
-		(id, code, name, category, status, latitude, longitude, description, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, item.ID, item.Code, item.Name, item.Category, item.Status,
+		(id, code, name, category_id, status, latitude, longitude, description, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, item.ID, item.Code, item.Name, item.CategoryID, item.Status,
 		item.Latitude, item.Longitude, item.Description, item.CreatedAt, item.UpdatedAt)
-	return item, err
+	if err != nil {
+		return Entity{}, err
+	}
+	return r.Get(ctx, item.ID)
 }
 
-func (r *Repository) List(ctx context.Context, q, category, status string) ([]Entity, error) {
-	query := `SELECT id, code, name, category, status, latitude, longitude, description, created_at, updated_at
-		FROM entities WHERE 1 = 1`
+func (r *Repository) List(ctx context.Context, q, categoryID, legacyCategory, status string) ([]Entity, error) {
+	query := `SELECT e.id, e.code, e.name, c.legacy_key, e.category_id, c.name, c.icon_key, c.color, c.marker_style,
+		e.status, e.latitude, e.longitude, e.description, e.created_at, e.updated_at
+		FROM entities e JOIN categories c ON c.id = e.category_id WHERE 1 = 1`
 	args := make([]any, 0, 3)
 	if q != "" {
-		query += ` AND (code LIKE ? COLLATE NOCASE OR name LIKE ? COLLATE NOCASE)`
+		query += ` AND (e.code LIKE ? COLLATE NOCASE OR e.name LIKE ? COLLATE NOCASE)`
 		args = append(args, "%"+q+"%", "%"+q+"%")
 	}
-	if category != "" {
-		query += ` AND category = ?`
-		args = append(args, category)
+	if categoryID != "" {
+		query += ` AND e.category_id = ?`
+		args = append(args, categoryID)
+	} else if legacyCategory != "" {
+		query += ` AND c.legacy_key = ? COLLATE NOCASE`
+		args = append(args, legacyCategory)
 	}
 	if status != "" {
-		query += ` AND status = ?`
+		query += ` AND e.status = ?`
 		args = append(args, status)
 	}
-	query += ` ORDER BY code COLLATE NOCASE, id`
+	query += ` ORDER BY e.code COLLATE NOCASE, e.id`
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -56,8 +68,7 @@ func (r *Repository) List(ctx context.Context, q, category, status string) ([]En
 	items := make([]Entity, 0)
 	for rows.Next() {
 		var item Entity
-		if err := rows.Scan(&item.ID, &item.Code, &item.Name, &item.Category, &item.Status,
-			&item.Latitude, &item.Longitude, &item.Description, &item.CreatedAt, &item.UpdatedAt); err != nil {
+		if err := scanEntity(rows, &item); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -67,10 +78,9 @@ func (r *Repository) List(ctx context.Context, q, category, status string) ([]En
 
 func (r *Repository) Get(ctx context.Context, id string) (Entity, error) {
 	var item Entity
-	err := r.db.QueryRowContext(ctx, `SELECT id, code, name, category, status, latitude, longitude,
-		description, created_at, updated_at FROM entities WHERE id = ?`, id).Scan(
-		&item.ID, &item.Code, &item.Name, &item.Category, &item.Status, &item.Latitude, &item.Longitude,
-		&item.Description, &item.CreatedAt, &item.UpdatedAt)
+	err := scanEntity(r.db.QueryRowContext(ctx, `SELECT e.id, e.code, e.name, c.legacy_key, e.category_id, c.name, c.icon_key, c.color, c.marker_style,
+		e.status, e.latitude, e.longitude, e.description, e.created_at, e.updated_at
+		FROM entities e JOIN categories c ON c.id = e.category_id WHERE e.id = ?`, id), &item)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Entity{}, ErrNotFound
 	}
@@ -78,9 +88,13 @@ func (r *Repository) Get(ctx context.Context, id string) (Entity, error) {
 }
 
 func (r *Repository) Update(ctx context.Context, id string, input Input) (Entity, error) {
-	result, err := r.db.ExecContext(ctx, `UPDATE entities SET code = ?, name = ?, category = ?, status = ?,
+	categoryID, err := r.resolveCategory(ctx, input)
+	if err != nil {
+		return Entity{}, err
+	}
+	result, err := r.db.ExecContext(ctx, `UPDATE entities SET code = ?, name = ?, category_id = ?, status = ?,
 		latitude = ?, longitude = ?, description = ?, updated_at = ? WHERE id = ?`,
-		input.Code, input.Name, input.Category, input.Status, *input.Latitude, *input.Longitude,
+		input.Code, input.Name, categoryID, input.Status, *input.Latitude, *input.Longitude,
 		input.Description, now(), id)
 	if err != nil {
 		return Entity{}, err
@@ -93,6 +107,40 @@ func (r *Repository) Update(ctx context.Context, id string, input Input) (Entity
 		return Entity{}, ErrNotFound
 	}
 	return r.Get(ctx, id)
+}
+
+func (r *Repository) CategoryExists(ctx context.Context, categoryID, legacyKey string) (bool, error) {
+	var exists int
+	var err error
+	if categoryID != "" {
+		err = r.db.QueryRowContext(ctx, `SELECT 1 FROM categories WHERE id = ?`, categoryID).Scan(&exists)
+	} else {
+		err = r.db.QueryRowContext(ctx, `SELECT 1 FROM categories WHERE legacy_key = ? COLLATE NOCASE`, legacyKey).Scan(&exists)
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+func (r *Repository) resolveCategory(ctx context.Context, input Input) (string, error) {
+	var id string
+	var err error
+	if input.CategoryID != "" {
+		err = r.db.QueryRowContext(ctx, `SELECT id FROM categories WHERE id = ?`, input.CategoryID).Scan(&id)
+	} else {
+		err = r.db.QueryRowContext(ctx, `SELECT id FROM categories WHERE legacy_key = ? COLLATE NOCASE`, input.Category).Scan(&id)
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrCategoryNotFound
+	}
+	return id, err
+}
+
+func scanEntity(row interface{ Scan(...any) error }, item *Entity) error {
+	return row.Scan(&item.ID, &item.Code, &item.Name, &item.Category, &item.CategoryID, &item.CategoryName,
+		&item.CategoryIconKey, &item.CategoryColor, &item.CategoryMarkerStyle, &item.Status, &item.Latitude, &item.Longitude,
+		&item.Description, &item.CreatedAt, &item.UpdatedAt)
 }
 
 func (r *Repository) Delete(ctx context.Context, id string) error {

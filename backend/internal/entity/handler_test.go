@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"geotrack/backend/internal/category"
 	"geotrack/backend/internal/database"
 	"geotrack/backend/internal/entity"
 	"geotrack/backend/internal/httpserver"
@@ -19,7 +20,7 @@ func newTestServer(t *testing.T, path string) (http.Handler, func()) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return httpserver.New(entity.NewRepository(db), "http://localhost:5173"), func() { db.Close() }
+	return httpserver.New(entity.NewRepository(db), category.NewRepository(db), "http://localhost:5173"), func() { db.Close() }
 }
 
 func request(t *testing.T, handler http.Handler, method, path string, body any) *httptest.ResponseRecorder {

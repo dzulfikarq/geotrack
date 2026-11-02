@@ -7,22 +7,28 @@ import (
 )
 
 type Entity struct {
-	ID          string  `json:"id"`
-	Code        string  `json:"code"`
-	Name        string  `json:"name"`
-	Category    string  `json:"category"`
-	Status      string  `json:"status"`
-	Latitude    float64 `json:"latitude"`
-	Longitude   float64 `json:"longitude"`
-	Description string  `json:"description"`
-	CreatedAt   string  `json:"created_at"`
-	UpdatedAt   string  `json:"updated_at"`
+	ID                  string  `json:"id"`
+	Code                string  `json:"code"`
+	Name                string  `json:"name"`
+	Category            string  `json:"category"` // Legacy category key; relationship uses CategoryID.
+	CategoryID          string  `json:"category_id"`
+	CategoryName        string  `json:"category_name"`
+	CategoryIconKey     string  `json:"category_icon_key"`
+	CategoryColor       string  `json:"category_color"`
+	CategoryMarkerStyle string  `json:"category_marker_style"`
+	Status              string  `json:"status"`
+	Latitude            float64 `json:"latitude"`
+	Longitude           float64 `json:"longitude"`
+	Description         string  `json:"description"`
+	CreatedAt           string  `json:"created_at"`
+	UpdatedAt           string  `json:"updated_at"`
 }
 
 type Input struct {
 	Code        string   `json:"code"`
 	Name        string   `json:"name"`
 	Category    string   `json:"category"`
+	CategoryID  string   `json:"category_id"`
 	Status      string   `json:"status"`
 	Latitude    *float64 `json:"latitude"`
 	Longitude   *float64 `json:"longitude"`

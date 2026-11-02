@@ -3,16 +3,19 @@ package httpserver
 import (
 	"net/http"
 
+	"geotrack/backend/internal/category"
 	"geotrack/backend/internal/entity"
 	"github.com/gin-gonic/gin"
 )
 
-func New(repo *entity.Repository, corsOrigin string) http.Handler {
+func New(repo *entity.Repository, categories *category.Repository, corsOrigin string) http.Handler {
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery(), cors(corsOrigin))
 	router.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
 	api := router.Group("/api/v1/entities")
 	entity.NewHandler(repo).Register(api)
+	categoryAPI := router.Group("/api/v1/categories")
+	category.NewHandler(categories).Register(categoryAPI)
 	return router
 }
 
