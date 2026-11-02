@@ -83,7 +83,7 @@ Database baru kosong. Untuk mengisinya, dari direktori `backend/` jalankan:
 go run ./cmd/seed
 ```
 
-Perintah ini menambahkan `VEH-001`, `IOT-001`, dan `FAC-001`, satu per kategori. Kode yang sudah ada dilewati; seed tidak mengubah data yang sudah tersimpan. Jika memakai `DB_PATH` khusus, set nilai yang sama sebelum menjalankan seed. Detail: [DATABASE.md](docs/DATABASE.md#seed-data).
+Perintah ini menyiapkan 25 entity demo di delapan kategori (tiga bawaan dan lima custom). Kategori dan kode entity yang sudah ada dipakai/dilewati; seed tidak mengubah data tersimpan. Jika memakai `DB_PATH` khusus, set nilai yang sama sebelum menjalankan seed. Detail: [DATABASE.md](docs/DATABASE.md#seed-data).
 
 ## Dokumentasi
 

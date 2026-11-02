@@ -19,7 +19,7 @@ Dokumen ini membedakan fitur yang memang di luar lingkup, keterbatasan implement
 - Perbandingan `LIKE`/`NOCASE` SQLite tidak menjamin case folding Unicode penuh. Selain itu, Go menghitung panjang berdasarkan Unicode code point, sedangkan Zod/JavaScript menghitung unit UTF-16; batas karakter untuk emoji/surrogate pair dapat berbeda antara client dan server.
 - SQLite pool dibatasi satu koneksi untuk menyerialisasi operasi. Throughput/concurrency tidak diukur; satu koneksi dapat membatasi pembacaan.
 - Migrasi kategori memiliki versi 2–3 dan memigrasikan schema entity legacy secara idempotent. Belum ada migration framework eksternal atau prosedur backup/restore database otomatis.
-- Seed memasukkan item satu per satu, bukan dalam transaksi. Kegagalan di tengah dapat meninggalkan sebagian seed; kode yang telah ada hanya dilewati dan tidak diperbarui.
+- Seed memasukkan kategori dan entity satu per satu, bukan dalam transaksi. Kegagalan di tengah dapat meninggalkan sebagian seed; kategori dengan nama sama dan kode entity yang telah ada dilewati, tidak diperbarui.
 - Backend membaca environment proses dan tidak memuat `.env`. Contoh `.env.example` bukan konfigurasi otomatis.
 - Vite build sukses tetapi mengeluarkan dua warning Rollup tentang posisi komentar anotasi di dependency Zod v4 dan warning bundle JavaScript minified >500 kB. Semua warning non-fatal; belum ditangani.
 - API tidak memasang graceful shutdown khusus untuk `SIGINT`/`SIGTERM`.

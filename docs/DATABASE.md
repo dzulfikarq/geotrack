@@ -70,12 +70,19 @@ Semua operasi memakai parameter SQL, bukan menyisipkan input pengguna ke query. 
 
 ## Seed data
 
-Seed bersifat opt-in. Dari `backend/`, jalankan `go run ./cmd/seed` dengan environment `DB_PATH` yang sama seperti API. Command menambahkan:
+Seed bersifat opt-in. Dari `backend/`, jalankan `go run ./cmd/seed` dengan environment `DB_PATH` yang sama seperti API. Command menyiapkan 25 entity demo tersebar di delapan kategori:
 
-| Kode | Nama | Kategori | Status | Koordinat |
-|---|---|---|---|---|
-| `VEH-001` | Service Vehicle | `vehicle` | `active` | `-7.9666, 112.6326` |
-| `IOT-001` | Temperature Sensor | `iot_device` | `active` | `0, 0` |
-| `FAC-001` | Operations Center | `facility` | `maintenance` | `-6.2088, 106.8456` |
+| Kategori | Tipe | Jumlah entity | Icon | Warna | Marker |
+|---|---|---|---|---|---|
+| Vehicle | Bawaan | 5 | `truck` | orange | pin |
+| IoT Device | Bawaan | 5 | `cpu` | teal | circle |
+| Facility | Bawaan | 4 | `building-2` | violet | rounded-square |
+| Warehouse | Custom | 3 | `warehouse` | blue | rounded-square |
+| Medical Center | Custom | 2 | `hospital` | green | circle |
+| Port Terminal | Custom | 2 | `ship` | teal | pin |
+| Retail Outlet | Custom | 2 | `building-2` | slate | rounded-square |
+| Utility Site | Custom | 2 | `factory` | rose | circle |
 
-Kode yang sudah ada dilewati; seed tidak memperbarui record lama. Seed tidak berjalan otomatis saat API start dan insert dilakukan per entitas, bukan sebagai satu transaksi. Lihat [batasan](LIMITATIONS.md#isu-yang-diketahui).
+Contoh entity: `VEH-001` Service Vehicle, `IOT-001` Temperature Sensor, `FAC-001` Operations Center, `WH-001` Malang Distribution Hub, dan `PORT-001` Tanjung Perak Terminal. Koordinat tersebar di kota-kota Indonesia; variasi status mencakup active, inactive, dan maintenance.
+
+Seed membuat kategori custom jika belum ada; kategori dengan nama sama dan kode entity yang sudah ada dipakai/dilewati tanpa memperbarui record. Seed tidak berjalan otomatis saat API start dan insert kategori/entity dilakukan satu per satu, bukan dalam satu transaksi. Lihat [batasan](LIMITATIONS.md#isu-yang-diketahui).
