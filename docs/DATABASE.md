@@ -1,0 +1,62 @@
+# Database dan persistensi
+
+## Teknologi dan lokasi
+
+Backend memakai `database/sql` dengan driver pure-Go `modernc.org/sqlite`, sehingga tidak memerlukan CGO atau server database terpisah.
+
+- Default `DB_PATH`: `./data/geotrack.db` relatif ke working directory proses.
+- Jalankan API dari direktori `backend/` untuk memakai lokasi `backend/data/geotrack.db`.
+- Direktori parent dibuat otomatis untuk path biasa.
+- Database lokal dan file SQLite diabaikan oleh `.gitignore`; tidak ada data database yang perlu di-commit.
+- `backend/.env.example` adalah contoh saja. Proses Go membaca environment, bukan file `.env`.
+
+Saat `database.Open` dipanggil, schema SQL yang di-embed dari `backend/internal/database/schema.sql` dijalankan dengan `CREATE ... IF NOT EXISTS`. Dengan demikian tabel dan index tersedia otomatis saat API/seed dibuka. Tidak ada migration version table atau alat migrasi terpisah.
+
+## Skema aktual
+
+```sql
+CREATE TABLE IF NOT EXISTS entities (
+  id TEXT PRIMARY KEY,
+  code TEXT NOT NULL COLLATE NOCASE UNIQUE,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('vehicle', 'iot_device', 'facility')),
+  status TEXT NOT NULL CHECK (status IN ('active', 'inactive', 'maintenance')),
+  latitude REAL NOT NULL CHECK (latitude BETWEEN -90 AND 90),
+  longitude REAL NOT NULL CHECK (longitude BETWEEN -180 AND 180),
+  description TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_entities_category ON entities(category);
+CREATE INDEX IF NOT EXISTS idx_entities_status ON entities(status);
+```
+
+| Kolom | Penyimpanan dan aturan |
+|---|---|
+| `id` | `TEXT PRIMARY KEY`; server menghasilkan UUID v4 berbentuk string. Tidak ada constraint SQL yang memvalidasi format UUID. |
+| `code` | Wajib, unique dengan collation `NOCASE`; aplikasi menormalisasi menjadi uppercase dan memvalidasi format. |
+| `name` | Wajib; aturan panjang/trim ditegakkan aplikasi. |
+| `category` | Wajib; dibatasi `CHECK` ke kategori yang didukung. |
+| `status` | Wajib; dibatasi `CHECK` ke status yang didukung. |
+| `latitude` | `REAL NOT NULL`, `CHECK -90..90` inklusif; nol valid. |
+| `longitude` | `REAL NOT NULL`, `CHECK -180..180` inklusif; nol valid. |
+| `description` | `TEXT NOT NULL DEFAULT ''`; batas panjang ditegakkan aplikasi. |
+| `created_at`, `updated_at` | `TEXT NOT NULL`; dibuat server sebagai waktu UTC RFC3339Nano. `updated_at` diganti saat update. |
+
+Constraint SQL adalah perlindungan tambahan. Validasi format kode, panjang string, enum, nilai finite koordinat, dan required fields dijalankan di aplikasi. Rincian: [API.md](API.md#validasi).
+
+## Akses database
+
+Semua operasi memakai parameter SQL, bukan menyisipkan input pengguna ke query. Kode membatasi pool ke satu koneksi dan menetapkan `PRAGMA busy_timeout = 5000`; ini menyederhanakan penulisan SQLite, tetapi membatasi throughput. Tidak ada pagination atau strategi multi-database.
+
+## Seed data
+
+Seed bersifat opt-in. Dari `backend/`, jalankan `go run ./cmd/seed` dengan environment `DB_PATH` yang sama seperti API. Command menambahkan:
+
+| Kode | Nama | Kategori | Status | Koordinat |
+|---|---|---|---|---|
+| `VEH-001` | Service Vehicle | `vehicle` | `active` | `-7.9666, 112.6326` |
+| `IOT-001` | Temperature Sensor | `iot_device` | `active` | `0, 0` |
+| `FAC-001` | Operations Center | `facility` | `maintenance` | `-6.2088, 106.8456` |
+
+Kode yang sudah ada dilewati; seed tidak memperbarui record lama. Seed tidak berjalan otomatis saat API start dan insert dilakukan per entitas, bukan sebagai satu transaksi. Lihat [batasan](LIMITATIONS.md#isu-yang-diketahui).
